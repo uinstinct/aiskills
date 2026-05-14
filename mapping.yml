@@ -1,0 +1,8 @@
+skills:
+  storytelling-mastery-skill:
+    repo: https://github.com/Zzzeen2552/storytelling-mastery-skill
+    used_for: creating stories
+
+  coding-skill:
+    repo: https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md
+    used_for: coding guidelines
