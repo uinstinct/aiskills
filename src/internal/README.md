@@ -17,7 +17,7 @@ Every script:
 
 ## Setup
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then sync the project:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) **≥ 0.8.19** (the version used to generate `uv.lock`), then sync the project:
 
 ```sh
 uv sync --project src/internal
