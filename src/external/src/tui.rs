@@ -13,6 +13,11 @@
 //! - US-014 fills in the List tab: read-only view of `.instinctagents`,
 //!   two sections (Skills + agents.md), each row shows name, version,
 //!   source_url, install_path.
+//! - US-015 fills in the Update tab: a passive check against
+//!   `GET /repos/<owner>/<repo>/releases/latest` runs on launch (cached
+//!   24h in `.instinctagents`) and renders an "Update available" banner
+//!   above the tabs on every tab when newer than the binary's
+//!   `CARGO_PKG_VERSION`.
 
 use std::io::{self, IsTerminal, Stdout};
 use std::path::PathBuf;
@@ -33,8 +38,10 @@ use ratatui::{
 
 use crate::catalog::{self, CatalogEntry};
 use crate::harness::{self, Harness};
+use crate::http::{self, HttpError};
 use crate::installer::{self, OverwriteAction, SkillInstallOutcome};
 use crate::state::ProjectState;
+use crate::update::{self, UpdateStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -363,10 +370,32 @@ pub struct App {
     add: AddTabState,
     remove: RemoveTabState,
     list: Vec<ListRow>,
+    update_status: UpdateStatus,
 }
 
 impl App {
+    /// Test / no-network entry point. Defaults the update status to
+    /// `Unknown { current: CARGO_PKG_VERSION }` so tests never reach out to
+    /// the network. Production code paths use [`App::new_with_update`].
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn new(project_root: PathBuf, harness: Option<Harness>) -> Self {
+        Self::new_with_update(
+            project_root,
+            harness,
+            UpdateStatus::Unknown {
+                current: env!("CARGO_PKG_VERSION").to_string(),
+            },
+        )
+    }
+
+    /// Production entry point: builds an App against a pre-computed update
+    /// status. The status is determined synchronously in [`run`] before the
+    /// terminal is set up.
+    pub fn new_with_update(
+        project_root: PathBuf,
+        harness: Option<Harness>,
+        update_status: UpdateStatus,
+    ) -> Self {
         let state = ProjectState::load(&project_root).unwrap_or_default();
         let add_rows = build_add_rows(catalog::SKILLS, catalog::AGENTS_MD, &state, harness);
         let remove_rows = build_remove_rows(&state);
@@ -379,6 +408,7 @@ impl App {
             add: AddTabState::new(add_rows),
             remove: RemoveTabState::new(remove_rows),
             list: list_rows,
+            update_status,
         }
     }
 
@@ -696,7 +726,22 @@ pub fn run() -> io::Result<()> {
 
     let project_root = std::env::current_dir()?;
     let detected = harness::detect(&project_root);
-    let app = App::new(project_root, detected);
+    let status = update::check(
+        &project_root,
+        installer::REGISTRY_REPO,
+        env!("CARGO_PKG_VERSION"),
+        chrono::Utc::now(),
+        || {
+            let body = http::fetch_latest_release_json(installer::REGISTRY_REPO)?;
+            update::parse_tag_name(&body).ok_or_else(|| HttpError::Malformed {
+                url: format!(
+                    "https://api.github.com/repos/{}/releases/latest",
+                    installer::REGISTRY_REPO
+                ),
+            })
+        },
+    );
+    let app = App::new_with_update(project_root, detected, status);
     run_app(app)
 }
 
@@ -737,10 +782,16 @@ fn event_loop(
 }
 
 fn ui(f: &mut Frame, app: &App) {
+    // AC: "On binary launch (any tab) print one-line 'update available'
+    // notice at top if applicable". The banner sits between the harness
+    // header and the tabs row so it's visible regardless of the active tab.
+    let banner_height = if app.update_status.is_available() { 1 } else { 0 };
+
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),
+            Constraint::Length(banner_height),
             Constraint::Length(3),
             Constraint::Min(1),
             Constraint::Length(2),
@@ -748,9 +799,12 @@ fn ui(f: &mut Frame, app: &App) {
         .split(f.area());
 
     render_header(f, app, layout[0]);
-    render_tabs(f, app, layout[1]);
-    render_body(f, app, layout[2]);
-    render_footer(f, app, layout[3]);
+    if banner_height > 0 {
+        render_update_banner(f, app, layout[1]);
+    }
+    render_tabs(f, app, layout[2]);
+    render_body(f, app, layout[3]);
+    render_footer(f, app, layout[4]);
 
     if app.current_tab == Tab::Add {
         if let Some(modal) = &app.add.modal {
@@ -761,6 +815,19 @@ fn ui(f: &mut Frame, app: &App) {
         if let Some(confirm) = &app.remove.confirm {
             render_confirm_modal(f, confirm);
         }
+    }
+}
+
+fn render_update_banner(f: &mut Frame, app: &App, area: Rect) {
+    if let UpdateStatus::Available { latest, .. } = &app.update_status {
+        let text = format!("Update available: {} — switch to the Update tab", latest);
+        let p = Paragraph::new(Span::styled(
+            text,
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ));
+        f.render_widget(p, area);
     }
 }
 
@@ -820,16 +887,54 @@ fn render_body(f: &mut Frame, app: &App, area: Rect) {
         Tab::Add => render_add(f, app, area),
         Tab::Remove => render_remove(f, app, area),
         Tab::List => render_list(f, app, area),
-        Tab::Update => {
-            let body_text = format!("{} tab (placeholder)", app.current_tab.title());
-            let body = Paragraph::new(Span::raw(body_text)).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(app.current_tab.title()),
-            );
-            f.render_widget(body, area);
-        }
+        Tab::Update => render_update(f, app, area),
     }
+}
+
+fn render_update(f: &mut Frame, app: &App, area: Rect) {
+    let body_area = Block::default().borders(Borders::ALL).title("Update");
+    let inner = body_area.inner(area);
+    f.render_widget(body_area, area);
+
+    let lines: Vec<Line> = match &app.update_status {
+        UpdateStatus::UpToDate { current } => vec![Line::from(Span::styled(
+            format!("You are on the latest version (v{}).", current.trim_start_matches('v')),
+            Style::default().fg(Color::Green),
+        ))],
+        UpdateStatus::Available {
+            latest,
+            release_url,
+            ..
+        } => {
+            let v = latest.trim_start_matches('v');
+            vec![
+                Line::from(Span::styled(
+                    format!(
+                        "A new version v{} is available. Re-run the curl install command to update.",
+                        v
+                    ),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )),
+                Line::from(""),
+                Line::from(Span::styled(
+                    format!("Release notes: {}", release_url),
+                    Style::default().fg(Color::DarkGray),
+                )),
+            ]
+        }
+        UpdateStatus::Unknown { current } => vec![Line::from(Span::styled(
+            format!(
+                "Could not reach github.com to check for updates. Running v{}.",
+                current.trim_start_matches('v')
+            ),
+            Style::default().fg(Color::DarkGray),
+        ))],
+    };
+
+    let p = Paragraph::new(lines).wrap(Wrap { trim: false });
+    f.render_widget(p, inner);
 }
 
 fn render_list(f: &mut Frame, app: &App, area: Rect) {
@@ -1776,6 +1881,42 @@ mod tests {
         // List is read-only; it must work even when no harness is detected.
         let app = fresh_app(None);
         assert!(!app.tab_disabled(Tab::List));
+    }
+
+    // -- Update tab tests -----------------------------------------------------
+
+    #[test]
+    fn app_new_defaults_update_status_to_unknown() {
+        let app = fresh_app(Some(Harness::ClaudeCode));
+        assert!(matches!(app.update_status, UpdateStatus::Unknown { .. }));
+        assert!(
+            !app.update_status.is_available(),
+            "Unknown must not render the banner"
+        );
+    }
+
+    #[test]
+    fn app_new_with_update_carries_status() {
+        let dir = TempDir::new().unwrap();
+        let status = UpdateStatus::Available {
+            current: "0.1.0".into(),
+            latest: "v0.2.0".into(),
+            release_url: "https://example.test".into(),
+        };
+        let app = App::new_with_update(
+            dir.path().to_path_buf(),
+            Some(Harness::ClaudeCode),
+            status.clone(),
+        );
+        assert_eq!(app.update_status, status);
+        assert!(app.update_status.is_available());
+    }
+
+    #[test]
+    fn update_tab_remains_enabled_without_harness() {
+        // Update is informational; matches List and must not gate on harness.
+        let app = fresh_app(None);
+        assert!(!app.tab_disabled(Tab::Update));
     }
 
     #[test]
