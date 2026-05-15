@@ -1,0 +1,11 @@
+[package]
+name = "instinctagents"
+version = "0.1.0"
+edition = "2021"
+description = "Single-binary CLI/TUI for installing skills and agents.md snippets from the instinctagents registry."
+license = "MIT"
+repository = "https://github.com/uinstinct/aiskills"
+
+[[bin]]
+name = "instinctagents"
+path = "src/main.rs"

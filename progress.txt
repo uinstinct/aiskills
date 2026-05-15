@@ -6,7 +6,29 @@
 - Allowed harness_compatibility values are exactly: claude-code, codex, opencode. Empty list / omitted = compatible with all.
 - prd.json is the source of truth for story state. After completing a story, flip `passes: true` and update `notes` with what was delivered.
 - Branch: ralph/instinctagents (already checked out). Commit per story with `feat: [US-ID] - [Title]`.
-- No Rust project bootstrapped yet (that's US-004), so "typecheck passes" for early documentation stories is satisfied trivially — no compile step exists to break.
+- Cargo layout: root Cargo.toml is a workspace with `members = ["src/external"]`, resolver = "2". The binary crate lives at src/external/ (package name `instinctagents`, edition 2021, binary target). Run `cargo check`, `cargo clippy --all-targets -- -D warnings`, and `cargo build --release` from the repo root. Output binary: target/release/instinctagents.
+- Rust module skeleton at src/external/src/: main.rs (entrypoint, declares all sibling mods), cli.rs, tui.rs, harness.rs, catalog.rs, installer.rs, state.rs, update.rs, http.rs. Each stub carries a one-line `//!` doc comment naming the story that fills it in — keep that convention when adding new modules.
+
+## 2026-05-15 - US-004
+- Bootstrapped the Rust workspace and module skeleton for the external CLI.
+- Files changed:
+  - Cargo.toml (new, workspace at repo root pointing at src/external)
+  - src/external/Cargo.toml (new, package instinctagents v0.1.0, binary target)
+  - src/external/src/main.rs (new, declares all sibling modules, prints version)
+  - src/external/src/{cli,tui,harness,catalog,installer,state,update,http}.rs (new stubs, one-line `//!` doc comments)
+  - src/external/.gitkeep (deleted; directory is no longer empty)
+  - prd.json (US-004 passes -> true)
+- Quality gates:
+  - `cargo check` clean.
+  - `cargo clippy --all-targets -- -D warnings` clean.
+  - `cargo build --release` produced target/release/instinctagents (≈400KB, runs and prints `instinctagents v0.1.0`).
+- **Learnings for future iterations:**
+  - Workspace root means subsequent stories can run cargo commands from the repo root without `--manifest-path`. Useful for CI (US-028) and the install script (US-017).
+  - Empty `.rs` stubs with only a `//!` doc comment compile cleanly under `-D warnings`. As stories add real code, watch for `dead_code` and `unused_imports` — they will start firing once items exist but aren't yet referenced.
+  - The `[[bin]]` name `instinctagents` (lower-case, no dash) is what the curl install script (US-017) and the release packaging (US-030) must match.
+  - target/ is already in .gitignore (from US-001), so build artifacts won't leak into commits.
+  - Cargo.lock was generated at the workspace root. Per Rust convention for binary crates we should commit it (provides reproducible CI builds); leave that decision for US-028 if needed.
+---
 
 ## 2026-05-15 - US-003
 - Wrote docs/mapping-schema.md documenting the top-level mapping.yml: two required list keys (installed_skills, installed_agents_md), the four per-entry fields (name, version, source_url, install_path), uniqueness/cross-reference constraints with manifest.yml, validation rules, and a minimal example matching the seed catalog from US-001.

@@ -66,8 +66,8 @@
         "cargo clippy -- -D warnings passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Cargo workspace at repo root (members = [src/external]); package `instinctagents` at src/external with edition 2021 and binary target. Module skeleton stubs created at src/external/src/{main,cli,tui,harness,catalog,installer,state,update,http}.rs. `cargo check`, `cargo clippy --all-targets -- -D warnings`, and `cargo build --release` all pass."
     },
     {
       "id": "US-005",
