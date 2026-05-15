@@ -393,8 +393,8 @@
         "Typecheck passes (python -m py_compile)"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "skill_list.py was already fully implemented during US-019's skeleton pass (the read-only path is trivial). This story validates the existing implementation against AC and polishes the module docstring (dropped the 'US-022 polishes if needed' aside since this story is the polish). Default mode prints a fixed-width NAME(32) / VERSION(12) / SOURCE_URL table; --json emits `json.dump(entries, sys.stdout, indent=2, sort_keys=True)` plus trailing newline. Empty installed_skills prints '(no skills in registry)' in table mode and `[]` in JSON mode (json.dump on an empty list — no special-case needed). Errors funnel through lib.IngestError + fail() per the established contract. `python -m py_compile src/internal/*.py` clean; smoke verified --help, default mode, and --json against the example-skill entry."
     },
     {
       "id": "US-023",

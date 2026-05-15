@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """List every skill currently in the registry.
 
-Reads ``mapping.yml`` and prints a tabular or JSON listing of the
-``installed_skills`` section. US-019 lands the argparse skeleton + the
-basic tabular output (since it's trivial); US-022 polishes JSON output
-and column alignment if needed.
+Reads ``mapping.yml`` and prints a tabular (default) or JSON
+(``--json``) listing of the ``installed_skills`` section.
 """
 
 from __future__ import annotations
