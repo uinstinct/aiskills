@@ -344,8 +344,8 @@
         "Typecheck passes (python -m py_compile src/internal/*.py)"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "src/internal/ skeleton landed. Six argparse-driven scripts (skill_add.py, skill_remove.py, skill_list.py, agents_md_add.py, agents_md_remove.py, agents_md_list.py) plus shared lib.py. Every script supports --help (argparse auto-adds it); missing required flags exit 2 via argparse; unimplemented operations raise IngestError and call lib.fail() which prints `error: <msg>` to stderr and exits 1. lib.py exposes repo_root() (walks up looking for mapping.yml), load_mapping()/save_mapping() (atomic write via temp + rename, deterministic by sorting entries within each section), find_entry/remove_entry list helpers, entry_dir()/install_path_for() resolvers keyed on `skill`/`agents-md`, and the IngestError + fail() pair the scripts route through. skill_list.py and agents_md_list.py are already fully implemented (the read-only path is trivial and US-022/US-024 list-spec already lands here); add/remove scripts are skeletons that defer to US-020/021/023/024 for the network + filesystem behavior. requirements.txt pins pyyaml>=6.0 (only runtime dep — keeps slash-command setup tiny). src/internal/README.md documents per-script invocation, args, exit codes, and the lib.py helper surface. `python -m py_compile src/internal/*.py` passes. Manual smoke verified: --help renders for all six; skill_list / agents_md_list correctly print the example entries from US-001 in both table and --json form; skill_remove with no --name exits 2; skill_add / skill_remove / agents_md_add / agents_md_remove print the deferred-impl error and exit 1."
     },
     {
       "id": "US-020",
