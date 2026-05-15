@@ -190,8 +190,8 @@
         "Tests pass"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "installer.rs now exposes the agents.md injection path: `upsert_block(content, name, snippet) -> String` (pure), `upsert_block_in_file(path, name, snippet) -> io::Result<()>`, and `install_agents_md_snippet(project_root, harness, name, version, source_url, snippet) -> Result<(), InstallError>`. Delimiters are `<!-- instinctagents:start:<name> -->` / `<!-- instinctagents:end:<name> -->` rendered as `<start>\\n<body>\\n<end>` (snippet trimmed of leading/trailing newlines). Replace-in-place finds the first start delim and the first end delim AFTER it (so unrelated end-delims earlier in the file don't capture); bytes outside the delimiter range are preserved byte-for-byte. Fresh-file path: creates the file via fs::write (parent dir assumed to exist — harness signal implies project root); blank-line-before rule applies only when original content is non-empty. Trailing newline always appended for clean file end. State update is upsert: matches by `name` in `installed_agents_md`, replaces in place if present, else pushes. `InstallError { Io, State }` with From for io::Error and StateError. 12 unit tests in installer::tests cover: empty-file, append-with-blank-line, append-when-no-trailing-newline, replace-in-place preserves surroundings, multi-block only-matching-replaced, snippet newline trimming, idempotent replace, in-file create-missing, in-file preserve-user-content, full install writes file + state, Codex targets AGENTS.md (not CLAUDE.md), and repeated install of same name leaves exactly one block + one state entry. cargo check / clippy --all-targets -D warnings / test (47 unit + 6 integration passed) / build --release all green."
     },
     {
       "id": "US-012",
