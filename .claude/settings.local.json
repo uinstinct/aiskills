@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "ralph-skills@ralph-marketplace": true,
+    "superpowers@superpowers-marketplace": true
+  }
+}
