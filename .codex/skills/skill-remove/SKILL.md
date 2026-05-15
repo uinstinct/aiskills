@@ -8,7 +8,7 @@ When the user asks to remove a skill by name (e.g. "run skill-remove for <name>"
 Run:
 
 ```bash
-python src/internal/skill_remove.py <ARGUMENTS>
+uv run --project src/internal python src/internal/skill_remove.py <ARGUMENTS>
 ```
 
 where `<ARGUMENTS>` carries the user's `--name <skill_name>` (and `--dry-run` if they want a preview).

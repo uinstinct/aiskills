@@ -8,7 +8,7 @@ When the user asks to remove an agents.md integration by name (e.g. "run agents-
 Run:
 
 ```bash
-python src/internal/agents_md_remove.py <ARGUMENTS>
+uv run --project src/internal python src/internal/agents_md_remove.py <ARGUMENTS>
 ```
 
 where `<ARGUMENTS>` carries the user's `--name <integration_name>` (and `--dry-run` if they want a preview).

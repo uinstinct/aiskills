@@ -8,7 +8,7 @@ When the user asks to list the agents.md integrations currently in this registry
 Run:
 
 ```bash
-python src/internal/agents_md_list.py <ARGUMENTS>
+uv run --project src/internal python src/internal/agents_md_list.py <ARGUMENTS>
 ```
 
 Arguments (all optional):

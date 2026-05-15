@@ -8,7 +8,7 @@ When the user asks to list the skills currently in this registry (e.g. "run skil
 Run:
 
 ```bash
-python src/internal/skill_list.py <ARGUMENTS>
+uv run --project src/internal python src/internal/skill_list.py <ARGUMENTS>
 ```
 
 Arguments (all optional):

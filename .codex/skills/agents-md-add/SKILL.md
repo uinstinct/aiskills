@@ -8,7 +8,7 @@ When the user asks to add or ingest an agents.md integration from a GitHub URL (
 Run:
 
 ```bash
-python src/internal/agents_md_add.py <ARGUMENTS>
+uv run --project src/internal python src/internal/agents_md_add.py <ARGUMENTS>
 ```
 
 where `<ARGUMENTS>` is the URL the user provided, plus any optional flags they mentioned.

@@ -8,7 +8,7 @@ When the user asks to add or ingest a skill from a GitHub URL (e.g. "run skill-a
 Run:
 
 ```bash
-python src/internal/skill_add.py <ARGUMENTS>
+uv run --project src/internal python src/internal/skill_add.py <ARGUMENTS>
 ```
 
 where `<ARGUMENTS>` is the URL the user provided, plus any optional flags they mentioned.
