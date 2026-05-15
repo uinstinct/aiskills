@@ -129,10 +129,15 @@ Common helpers used by every script:
 
 ## Typecheck
 
-The only check the scripts gate on is `py_compile`:
+CI syncs the project with `uv sync --frozen --project src/internal` and then runs a smoke test:
 
 ```sh
-python -m py_compile src/internal/*.py
+uv run --project src/internal python src/internal/skill_list.py
 ```
 
-CI (US-028) runs this as the Python lint step.
+To run the same check locally:
+
+```sh
+uv sync --frozen --project src/internal
+uv run --project src/internal python src/internal/skill_list.py
+```

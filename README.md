@@ -52,6 +52,8 @@ mapping.yml             # registry catalog: every published skill and integratio
 
 ## For maintainers
 
+**Prerequisites:** Install [uv](https://docs.astral.sh/uv/getting-started/installation/) — it is the only Python tool you need. `uv` manages the interpreter and dependencies automatically.
+
 Add a new skill or integration from a GitHub URL via the slash commands shipped in `.claude/commands/`, `.codex/skills/`, and `.opencode/commands/`:
 
 ```
@@ -59,7 +61,7 @@ Add a new skill or integration from a GitHub URL via the slash commands shipped 
 /agents-md-add <github-url>
 ```
 
-These delegate to the Python scripts under `src/internal/`.
+These delegate to the Python scripts under `src/internal/`, which are invoked via `uv run --project src/internal`.
 
 ## License
 
