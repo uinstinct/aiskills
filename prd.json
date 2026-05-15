@@ -152,8 +152,8 @@
         "Tests pass"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "state.rs defines `ProjectState { last_update_check: Option<DateTime<Utc>>, latest_known_version: Option<String>, installed_skills: Vec<InstalledItem>, installed_agents_md: Vec<InstalledItem> }` and `InstalledItem { name, version, source_url, install_path: Option<String>, delimiter_id: Option<String> }`. Format: TOML at <project_root>/.instinctagents (constant `STATE_FILE_NAME`). `ProjectState::load(&Path)` returns `Self::default()` on NotFound; otherwise parses TOML. `ProjectState::save(&Path)` writes to `.instinctagents.tmp` then `fs::rename` (atomic on same fs). `StateError` enum: Io / Parse / Serialize, all wired to std::error::Error. Scalar fields ordered before vectors in struct definition because toml requires that at top level. Added runtime deps: serde (derive), toml 0.8, chrono 0.4 (default-features=false, features=clock+serde). 7 unit tests cover load-missing, load-existing, save-and-roundtrip (full + empty), atomic-overwrite, parse-error, and path construction. cargo check/clippy --all-targets -D warnings/test (25 unit + 4 integration passed)/build --release all green."
     },
     {
       "id": "US-010",

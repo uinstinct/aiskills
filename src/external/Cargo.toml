@@ -17,6 +17,11 @@ path = "src/main.rs"
 # blocked by environments where ring's C build chain is unavailable. ureq's
 # request/response API is identical across both TLS backends, so http.rs
 # does not need to know which is active.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 ureq = { version = "2", default-features = false, features = ["rustls"] }
 
