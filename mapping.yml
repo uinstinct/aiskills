@@ -8,3 +8,7 @@ installed_agents_md:
   version: 0.1.0
   source_url: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md
   install_path: agents.md/grill-me/
+- name: karpathy-guidelines
+  version: 0.1.0
+  source_url: https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md
+  install_path: agents.md/karpathy-guidelines/
