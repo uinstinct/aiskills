@@ -50,8 +50,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "docs/mapping-schema.md created documenting top-level keys (installed_skills, installed_agents_md), per-entry fields (name, version, source_url, install_path), validation rules, and example mapping.yml."
     },
     {
       "id": "US-004",

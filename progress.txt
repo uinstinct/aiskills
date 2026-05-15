@@ -8,6 +8,20 @@
 - Branch: ralph/instinctagents (already checked out). Commit per story with `feat: [US-ID] - [Title]`.
 - No Rust project bootstrapped yet (that's US-004), so "typecheck passes" for early documentation stories is satisfied trivially — no compile step exists to break.
 
+## 2026-05-15 - US-003
+- Wrote docs/mapping-schema.md documenting the top-level mapping.yml: two required list keys (installed_skills, installed_agents_md), the four per-entry fields (name, version, source_url, install_path), uniqueness/cross-reference constraints with manifest.yml, validation rules, and a minimal example matching the seed catalog from US-001.
+- Files changed:
+  - docs/mapping-schema.md (new)
+  - prd.json (US-003 passes -> true)
+- **Learnings for future iterations:**
+  - The mapping.yml already shipped from US-001 references docs/mapping-schema.md by name in its header comment — that comment is now a live link.
+  - install_path is canonically written WITH a trailing slash (skills/<name>/ and agents.md/<name>/). Ingest scripts (US-020+) and the build script (US-005) should preserve that convention when emitting entries to avoid churn in diffs.
+  - A skill and an agents.md integration may legitimately share the same `name` (they live in different lists). The CLI handles this via the --type flag in non-interactive mode (US-016) — keep that in mind for the ingest scripts so they never assume name is globally unique.
+  - source_url is informational only; the build pipeline never re-fetches from it. It's purely for human auditing / provenance.
+  - Documentation-only stories continue to be vacuous for "Typecheck passes" until US-004 introduces Cargo.
+
+---
+
 ## 2026-05-15 - US-002
 - Wrote docs/manifest-schema.md with full field reference, validation rules, and example manifest files for both skill and agents.md integrations.
 - Files changed:
