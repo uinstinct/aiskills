@@ -61,7 +61,7 @@ fn non_interactive_add_without_harness_errors_cleanly() {
     Command::cargo_bin("instinctagents")
         .unwrap()
         .current_dir(project.path())
-        .args(["--non-interactive", "add", "--name", "example-skill"])
+        .args(["--non-interactive", "add", "--name", "storytelling-mastery-skill"])
         .assert()
         .failure()
         .stderr(contains("no harness detected"));

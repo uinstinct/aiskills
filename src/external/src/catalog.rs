@@ -33,21 +33,4 @@ mod tests {
             "AGENTS_MD catalog should not be empty"
         );
     }
-
-    #[test]
-    fn catalog_contains_us001_example_entries() {
-        let skill = SKILLS
-            .iter()
-            .find(|e| e.name == "example-skill")
-            .expect("example-skill from US-001 should be present in SKILLS");
-        assert_eq!(skill.source_path, "skills/example-skill");
-        assert!(!skill.version.is_empty());
-
-        let integration = AGENTS_MD
-            .iter()
-            .find(|e| e.name == "example-integration")
-            .expect("example-integration from US-001 should be present in AGENTS_MD");
-        assert_eq!(integration.source_path, "agents.md/example-integration");
-        assert!(!integration.version.is_empty());
-    }
 }

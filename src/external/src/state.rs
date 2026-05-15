@@ -103,21 +103,21 @@ mod tests {
 
     fn skill_item() -> InstalledItem {
         InstalledItem {
-            name: "example-skill".to_string(),
+            name: "storytelling-mastery-skill".to_string(),
             version: "0.1.0".to_string(),
             source_url: "https://github.com/uinstinct/aiskills".to_string(),
-            install_path: Some(".claude/skills/example-skill/".to_string()),
+            install_path: Some(".claude/skills/storytelling-mastery-skill/".to_string()),
             delimiter_id: None,
         }
     }
 
     fn agents_md_item() -> InstalledItem {
         InstalledItem {
-            name: "example-integration".to_string(),
+            name: "grill-me".to_string(),
             version: "0.1.0".to_string(),
             source_url: "https://github.com/uinstinct/aiskills".to_string(),
             install_path: None,
-            delimiter_id: Some("example-integration".to_string()),
+            delimiter_id: Some("grill-me".to_string()),
         }
     }
 
@@ -141,16 +141,16 @@ last_update_check = "2026-05-15T12:34:56Z"
 latest_known_version = "0.2.0"
 
 [[installed_skills]]
-name = "example-skill"
+name = "storytelling-mastery-skill"
 version = "0.1.0"
 source_url = "https://github.com/uinstinct/aiskills"
-install_path = ".claude/skills/example-skill/"
+install_path = ".claude/skills/storytelling-mastery-skill/"
 
 [[installed_agents_md]]
-name = "example-integration"
+name = "grill-me"
 version = "0.1.0"
 source_url = "https://github.com/uinstinct/aiskills"
-delimiter_id = "example-integration"
+delimiter_id = "grill-me"
 "#;
         fs::write(ProjectState::path(dir.path()), content).unwrap();
 

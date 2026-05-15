@@ -44,11 +44,11 @@ harness, unless the user passes `--force` (US-016).
 
 ## Example — skill manifest
 
-`skills/example-skill/manifest.yml`:
+`skills/my-skill/manifest.yml`:
 
 ```yaml
-name: example-skill
-description: Placeholder example skill used to keep the registry catalog non-empty during initial setup.
+name: my-skill
+description: One-line description of what this skill does.
 version: 0.1.0
 harness_compatibility: []
 entrypoint: SKILL.md
@@ -57,18 +57,18 @@ entrypoint: SKILL.md
 Equivalent minimal form (relying on defaults):
 
 ```yaml
-name: example-skill
-description: Placeholder example skill used to keep the registry catalog non-empty during initial setup.
+name: my-skill
+description: One-line description of what this skill does.
 version: 0.1.0
 ```
 
 ## Example — agents.md integration manifest
 
-`agents.md/example-integration/manifest.yml`:
+`agents.md/my-integration/manifest.yml`:
 
 ```yaml
-name: example-integration
-description: Placeholder example agents.md integration used to keep the registry catalog non-empty during initial setup.
+name: my-integration
+description: One-line description of what this integration adds to AGENTS.md.
 version: 0.1.0
 harness_compatibility: []
 snippet_file: snippet.md

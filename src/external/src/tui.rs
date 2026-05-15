@@ -1546,7 +1546,7 @@ mod tests {
         let project_root = dir.path().to_path_buf();
         // Pre-seed: a target folder for a catalog skill name. We use the
         // first catalog skill since the embedded catalog has at least one
-        // entry (example-skill from US-001).
+        // entry.
         let skill_name = catalog::SKILLS[0].name;
         std::fs::create_dir_all(project_root.join(".claude/skills").join(skill_name)).unwrap();
 

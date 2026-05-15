@@ -56,20 +56,20 @@ Every entry under either list has the same four fields. All are required.
 
 ## Example
 
-A minimal valid `mapping.yml` referencing the two seed entries from US-001:
+A minimal valid `mapping.yml` with one skill and one agents.md integration:
 
 ```yaml
 installed_skills:
-  - name: example-skill
+  - name: my-skill
     version: 0.1.0
-    source_url: https://github.com/instinctagents/instinctagents
-    install_path: skills/example-skill/
+    source_url: https://github.com/example/my-skill
+    install_path: skills/my-skill/
 
 installed_agents_md:
-  - name: example-integration
+  - name: my-integration
     version: 0.1.0
-    source_url: https://github.com/instinctagents/instinctagents
-    install_path: agents.md/example-integration/
+    source_url: https://github.com/example/my-integration
+    install_path: agents.md/my-integration/
 ```
 
 An empty-but-valid `mapping.yml` (useful as a starting point for a fresh

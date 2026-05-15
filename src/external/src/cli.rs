@@ -381,13 +381,13 @@ mod tests {
             "--non-interactive",
             "add",
             "--name",
-            "example-skill",
+            "storytelling-mastery-skill",
         ])
         .expect("must parse");
         assert!(cli.non_interactive);
         match cli.command {
             Some(Command::Add(a)) => {
-                assert_eq!(a.name, "example-skill");
+                assert_eq!(a.name, "storytelling-mastery-skill");
                 assert!(a.item_type.is_none());
             }
             other => panic!("expected Add, got {other:?}"),
@@ -632,7 +632,7 @@ mod tests {
             non_interactive: true,
             verbose: false,
             command: Some(Command::Add(ItemArgs {
-                name: "example-skill".to_string(),
+                name: "storytelling-mastery-skill".to_string(),
                 item_type: None,
             })),
         };
