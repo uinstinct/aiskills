@@ -467,8 +467,8 @@
         "Typecheck passes"
       ],
       "priority": 27,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Six OpenCode command files landed under .opencode/commands/ — skill-add.md, skill-remove.md, skill-list.md, agents-md-add.md, agents-md-remove.md, agents-md-list.md. Per https://opencode.ai/docs/commands/ the project-level path is `.opencode/commands/` (plural — same as the PRD AC), the YAML frontmatter only needs `description:` (agent/model are optional overrides we don't need), and the RUN directive is the inline `!\\`...\\`` bash-output-injection syntax (NOT a fenced code block). Each file uses `!\\`python src/internal/<script>.py $ARGUMENTS\\`` — OpenCode supports the same `$ARGUMENTS` placeholder as Claude Code, so the only structural difference from `.claude/commands/<name>.md` is that the script invocation runs at prompt-assembly time (its stdout is injected inline) rather than being a Bash tool call Claude initiates. Frontmatter `description:` strings are identical across .claude/commands, .codex/skills, and .opencode/commands per the US-025 cross-harness identical-UX rule; bodies document the same arguments and same stdout-on-success / stderr-error-verbatim surface contract. `allowed-tools` is dropped (OpenCode doesn't use that field — the `!\\`...\\`` invocation is the permission gate). Quality: `python -m py_compile src/internal/*.py` clean (no Python changes; AC typecheck gate confirmed). Manual `/skill-add <url>` in a live OpenCode session deferred per the slash-command exception (same as US-010/012/013/014/025/026). Adding `.opencode/` creates a third harness signal in this repo; harness::detect() priority (ClaudeCode > Codex > OpenCode) still resolves to ClaudeCode so existing behavior is unchanged."
     },
     {
       "id": "US-028",
