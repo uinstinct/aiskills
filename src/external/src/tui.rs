@@ -719,7 +719,11 @@ impl App {
 /// In non-TTY contexts (e.g. piped stdin/stdout under `assert_cmd`) the TUI is
 /// skipped and `Ok(())` is returned. This keeps the binary scriptable and
 /// allows the integration tests to launch the binary without a pty.
-pub fn run() -> io::Result<()> {
+///
+/// `verbose` is the `--verbose` flag from [`crate::cli`]. When set, the
+/// silent-by-default update-check failures (see US-015's contract) are
+/// surfaced to stderr.
+pub fn run(verbose: bool) -> io::Result<()> {
     if !io::stdout().is_terminal() {
         return Ok(());
     }
@@ -732,12 +736,21 @@ pub fn run() -> io::Result<()> {
         env!("CARGO_PKG_VERSION"),
         chrono::Utc::now(),
         || {
-            let body = http::fetch_latest_release_json(installer::REGISTRY_REPO)?;
-            update::parse_tag_name(&body).ok_or_else(|| HttpError::Malformed {
-                url: format!(
+            let body = http::fetch_latest_release_json(installer::REGISTRY_REPO).map_err(|e| {
+                if verbose {
+                    eprintln!("instinctagents: update check failed: {e}");
+                }
+                e
+            })?;
+            update::parse_tag_name(&body).ok_or_else(|| {
+                let url = format!(
                     "https://api.github.com/repos/{}/releases/latest",
                     installer::REGISTRY_REPO
-                ),
+                );
+                if verbose {
+                    eprintln!("instinctagents: update check returned malformed body from {url}");
+                }
+                HttpError::Malformed { url }
             })
         },
     );
