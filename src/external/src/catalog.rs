@@ -6,14 +6,16 @@
 //! slice of [`CatalogEntry`]. We `include!` that file below so the catalog is
 //! baked into the binary and works fully offline.
 
-#![allow(dead_code)]
-
 #[derive(Debug, Clone, Copy)]
 pub struct CatalogEntry {
     pub name: &'static str,
     pub description: &'static str,
     pub version: &'static str,
     pub harness_compatibility: &'static [&'static str],
+    /// Path of the entry inside the registry repo (e.g. `skills/foo`). Kept
+    /// for provenance / future debugging — not consumed by install paths
+    /// today.
+    #[allow(dead_code)]
     pub source_path: &'static str,
 }
 
