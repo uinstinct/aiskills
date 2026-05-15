@@ -99,8 +99,8 @@
         "Typecheck passes (cargo clippy -- -D warnings)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "harness.rs now exposes `Harness { ClaudeCode, Codex, OpenCode }` with `target_folder()` (.claude/skills/, .codex/skills/, .opencode/skills/) and `agents_md_file()` (CLAUDE.md, AGENTS.md, AGENTS.md). `detect(&Path)` uses fixed priority ClaudeCode > Codex > OpenCode and recognizes CLAUDE.md/.claude/, AGENTS.md/.codex/, opencode.json(c)/.opencode/. Added tempfile as dev-dependency; 12 unit tests cover positive cases, priority ordering, and the None case. cargo check/clippy --all-targets -D warnings/test/build --release all green."
     },
     {
       "id": "US-007",
