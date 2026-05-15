@@ -1,0 +1,5 @@
+name: example-skill
+description: Placeholder example skill used to keep the registry catalog non-empty during initial setup.
+version: 0.1.0
+harness_compatibility: []
+entrypoint: SKILL.md

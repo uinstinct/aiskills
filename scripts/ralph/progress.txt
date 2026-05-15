@@ -1,0 +1,31 @@
+# Ralph Progress Log
+Started: Fri May 15 15:46:12 IST 2026
+
+## Codebase Patterns
+- Registry layout: skills/<name>/{manifest.yml,SKILL.md}, agents.md/<name>/{manifest.yml,snippet.md}, src/external/ (Rust CLI), src/internal/ (Python maintainer scripts), .github/workflows/, root mapping.yml.
+- mapping.yml is the single source of truth for the catalog (installed_skills, installed_agents_md). Every add/remove maintainer script must update it.
+- Manifest yml fields used so far: name, description, version, harness_compatibility (array; empty = all), plus entrypoint (skills) or snippet_file (agents.md).
+- Empty directories tracked with .gitkeep placeholders so layout survives git.
+- Working branch: ralph/instinctagents (per PRD branchName). Create from main if missing.
+- No pyyaml available in the default python3; lightweight scripts should use string parsing or vendor a tiny YAML reader rather than depending on pyyaml at lint time.
+
+---
+
+## 2026-05-15 - US-001
+- Implemented the canonical registry repo directory layout.
+- Files changed:
+  - mapping.yml (new) - catalog with example-skill and example-integration entries
+  - README.md (new) - purpose, curl install command, usage of TUI tabs, layout
+  - .gitignore (new) - /target, /dist, *.tmp, .DS_Store, __pycache__, .instinctagents
+  - skills/example-skill/manifest.yml, skills/example-skill/SKILL.md (new placeholder skill)
+  - agents.md/example-integration/manifest.yml, agents.md/example-integration/snippet.md (new placeholder integration)
+  - src/internal/.gitkeep, src/external/.gitkeep, .github/workflows/.gitkeep (new, to track empty dirs)
+- Quality checks: no code to typecheck this story; YAML files validated structurally (mapping.yml references both example entries; required keys installed_skills / installed_agents_md present).
+- **Learnings for future iterations:**
+  - PRD branchName is `ralph/instinctagents`; this branch did not exist yet and was created from main.
+  - The PRD specifies the example entries must be referenced in mapping.yml even though it also says "empty lists" - I read this as: the *schema* should be `installed_skills: []` style with two top-level lists, and the example entries should still be present so the catalog is non-empty. Both lists in mapping.yml contain a single example.
+  - `agents.md/` is a folder name containing a dot - it must always be quoted/escaped carefully when used in shell commands.
+  - Python3 here does not ship pyyaml. Internal-tool stories should either install it via requirements.txt (US-019 already plans this) or avoid it at typecheck time.
+  - Manifest schema fields anticipated by later stories: entrypoint (default SKILL.md) for skills, snippet_file (default snippet.md) for agents.md. Example manifests already include these so US-002 has concrete inputs to document.
+
+---

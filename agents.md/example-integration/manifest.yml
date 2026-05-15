@@ -1,0 +1,5 @@
+name: example-integration
+description: Placeholder example agents.md integration used to keep the registry catalog non-empty during initial setup.
+version: 0.1.0
+harness_compatibility: []
+snippet_file: snippet.md
