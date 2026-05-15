@@ -380,8 +380,8 @@
         "Typecheck passes (python -m py_compile)"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "skill_remove.py implements the full remove path. CLI: `--name <skill_name>` (required, argparse exit 2 if missing) plus optional `--dry-run`. Flow: `repo_root()` -> `load_mapping()` -> `find_entry(installed_skills, name)`; missing-entry case raises `IngestError(\"skill <name> not found in mapping.yml; nothing to remove\")` -> `fail()` (exit 1). When the entry exists, `_collect_files(folder)` walks `skills/<name>/` via `rglob('*')` and returns sorted file paths relative to the folder (empty list when folder is missing — handled separately, not an error). Dry-run prints the mapping entry (name/version/source_url) and either the folder + file list or the 'already missing' note, then returns 0 without mutating anything. Real run deletes the folder via `lib.delete_dir` (no-op when missing) and prints a stderr warning 'warning: skills/<name>/ already missing; pruning mapping entry only' when the folder was gone, then `remove_entry(entries, name)` + `save_mapping(mapping)` (atomic via lib's temp+rename) prunes the catalog entry. Success summary on stdout lists deleted version/source_url and (when present) the deleted folder path + every file that was removed. `python -m py_compile src/internal/*.py` clean; smoke verified --help, missing-arg (argparse exit 2), missing-entry error (exit 1), dry-run against example-skill (lists SKILL.md + manifest.yml), full remove against example-skill (folder gone, mapping.yml pruned), and stale-folder case (folder pre-deleted, entry still present -> warning + entry pruned)."
     },
     {
       "id": "US-022",
