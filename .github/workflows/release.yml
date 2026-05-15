@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Linux x86_64 binary and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo build --release
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+
+      - name: Strip and rename binary
+        run: |
+          strip target/x86_64-unknown-linux-gnu/release/instinctagents
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/instinctagents dist/instinctagents-linux-x86_64
+
+      - name: Package release tarballs
+        run: ./scripts/package-release-assets.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/instinctagents-linux-x86_64
+            dist/skill-*.tar.gz
+            dist/agents-md-*.tar.gz
