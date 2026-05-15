@@ -5,7 +5,9 @@
 //! (download via [`crate::http`], extract to `<harness>/skills/<name>/`) plus
 //! conflict resolution (Skip / Overwrite / Rename) and the agents.md
 //! tarball wrapper that pulls a snippet out of an archive and delegates to
-//! [`install_agents_md_snippet`].
+//! [`install_agents_md_snippet`]. US-013 adds removal: deleting the skill
+//! folder, deleting the delimited agents.md block, and pruning the matching
+//! entry from `.instinctagents`.
 
 use std::fmt;
 use std::fs;
@@ -395,6 +397,87 @@ pub fn fetch_and_install_agents_md(
     let asset = agents_md_asset_name(name, version);
     let bytes = http::download_release_asset(REGISTRY_REPO, REGISTRY_TAG, &asset)?;
     install_agents_md_from_tarball(project_root, harness, name, version, source_url, &bytes)
+}
+
+/// Remove the delimited block named `name` from `content`. Pure string op.
+///
+/// Returns the new content plus `true` if a block was found and removed,
+/// `false` if no matching delimiter pair existed (content returned unchanged).
+/// Bytes outside the removed range are preserved verbatim — surrounding
+/// whitespace (blank lines that were inserted by [`upsert_block`]) is left in
+/// place; callers that want a tidier file structure can post-process.
+pub fn remove_block(content: &str, name: &str) -> (String, bool) {
+    let start = start_delim(name);
+    let end = end_delim(name);
+    if let Some(s_idx) = content.find(&start) {
+        let tail = &content[s_idx..];
+        if let Some(rel_e_idx) = tail.find(&end) {
+            let e_idx = s_idx + rel_e_idx;
+            let e_end = e_idx + end.len();
+            let mut out = String::with_capacity(content.len());
+            out.push_str(&content[..s_idx]);
+            out.push_str(&content[e_end..]);
+            return (out, true);
+        }
+    }
+    (content.to_string(), false)
+}
+
+/// Read `path`, drop the delimited block named `name`, write back. Returns
+/// `true` if the block was found and removed, `false` otherwise (also returns
+/// `false` when the file is missing — there is nothing to remove).
+pub fn remove_block_from_file(path: &Path, name: &str) -> io::Result<bool> {
+    let current = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(e) => return Err(e),
+    };
+    let (updated, found) = remove_block(&current, name);
+    if found {
+        fs::write(path, updated)?;
+    }
+    Ok(found)
+}
+
+/// Full uninstall path for a skill:
+/// 1. Delete `<project_root>/<harness.target_folder()>/<name>/` if it exists.
+/// 2. Drop the matching entry from `installed_skills` in `.instinctagents`.
+///
+/// Missing folder is not an error — the state is still cleaned up so future
+/// installs work correctly.
+pub fn remove_skill(
+    project_root: &Path,
+    harness: Harness,
+    name: &str,
+) -> Result<(), InstallError> {
+    let skill_dir = project_root.join(harness.target_folder()).join(name);
+    if skill_dir.exists() {
+        fs::remove_dir_all(&skill_dir)?;
+    }
+    let mut state = ProjectState::load(project_root)?;
+    state.installed_skills.retain(|e| e.name != name);
+    state.save(project_root)?;
+    Ok(())
+}
+
+/// Full uninstall path for an agents.md integration:
+/// 1. Remove the delimited block from `<project_root>/<harness.agents_md_file()>`.
+/// 2. Drop the matching entry from `installed_agents_md` in `.instinctagents`.
+///
+/// Returns `true` if the delimiter block was found and removed from the file,
+/// `false` if it was missing (e.g. user deleted it manually); the state entry
+/// is removed in either case.
+pub fn remove_agents_md(
+    project_root: &Path,
+    harness: Harness,
+    name: &str,
+) -> Result<bool, InstallError> {
+    let target = project_root.join(harness.agents_md_file());
+    let found = remove_block_from_file(&target, name)?;
+    let mut state = ProjectState::load(project_root)?;
+    state.installed_agents_md.retain(|e| e.name != name);
+    state.save(project_root)?;
+    Ok(found)
 }
 
 /// Full install path for an agents.md integration:
@@ -854,6 +937,233 @@ mod tests {
             agents_md_asset_name("bar", "0.1.0"),
             "agents-md-bar-0.1.0.tar.gz"
         );
+    }
+
+    // -- remove tests --------------------------------------------------------
+
+    #[test]
+    fn remove_block_drops_matching_pair_and_reports_true() {
+        let original = format!(
+            "# Project\n\nBefore.\n\n{}\n\nAfter.\n",
+            block_for("foo", "body")
+        );
+        let (out, found) = remove_block(&original, "foo");
+        assert!(found);
+        assert!(!out.contains("instinctagents:start:foo"));
+        assert!(!out.contains("instinctagents:end:foo"));
+        assert!(out.contains("Before."));
+        assert!(out.contains("After."));
+    }
+
+    #[test]
+    fn remove_block_missing_returns_unchanged_and_false() {
+        let original = "# Project\n\nNo blocks here.\n";
+        let (out, found) = remove_block(original, "foo");
+        assert!(!found);
+        assert_eq!(out, original);
+    }
+
+    #[test]
+    fn remove_block_only_touches_matching_name() {
+        let original = format!(
+            "head\n\n{}\n\n{}\n\ntail\n",
+            block_for("alpha", "alpha body"),
+            block_for("beta", "beta body")
+        );
+        let (out, found) = remove_block(&original, "beta");
+        assert!(found);
+        assert!(out.contains("alpha body"), "non-matching block preserved");
+        assert!(!out.contains("beta body"));
+        assert!(out.contains("instinctagents:start:alpha"));
+        assert!(!out.contains("instinctagents:start:beta"));
+    }
+
+    #[test]
+    fn remove_block_from_file_missing_returns_false() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("CLAUDE.md");
+        let found = remove_block_from_file(&path, "foo").unwrap();
+        assert!(!found);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn remove_skill_deletes_folder_and_state_entry() {
+        let dir = TempDir::new().unwrap();
+        // Install first so we have folder + state.
+        let gz = build_skill_tarball("demo", &[("SKILL.md", b"# demo")]);
+        install_skill_from_tarball(
+            dir.path(),
+            Harness::ClaudeCode,
+            "demo",
+            "0.1.0",
+            "https://example.test/demo",
+            &gz,
+            OverwriteAction::Skip,
+        )
+        .unwrap();
+        assert!(dir.path().join(".claude/skills/demo").is_dir());
+
+        remove_skill(dir.path(), Harness::ClaudeCode, "demo").unwrap();
+        assert!(!dir.path().join(".claude/skills/demo").exists());
+        let state = ProjectState::load(dir.path()).unwrap();
+        assert!(state.installed_skills.is_empty());
+    }
+
+    #[test]
+    fn remove_skill_missing_folder_still_prunes_state() {
+        let dir = TempDir::new().unwrap();
+        // Seed state without on-disk folder (partial-state edge).
+        let mut state = ProjectState::default();
+        state.installed_skills.push(InstalledItem {
+            name: "ghost".into(),
+            version: "0.1.0".into(),
+            source_url: "https://example.test/ghost".into(),
+            install_path: Some(".claude/skills/ghost/".into()),
+            delimiter_id: None,
+        });
+        state.save(dir.path()).unwrap();
+
+        remove_skill(dir.path(), Harness::ClaudeCode, "ghost").unwrap();
+        let after = ProjectState::load(dir.path()).unwrap();
+        assert!(after.installed_skills.is_empty());
+    }
+
+    #[test]
+    fn remove_skill_only_drops_matching_state_entry() {
+        let dir = TempDir::new().unwrap();
+        let gz = build_skill_tarball("a", &[("SKILL.md", b"a")]);
+        install_skill_from_tarball(
+            dir.path(),
+            Harness::ClaudeCode,
+            "a",
+            "0.1.0",
+            "https://example.test/a",
+            &gz,
+            OverwriteAction::Skip,
+        )
+        .unwrap();
+        let gz2 = build_skill_tarball("b", &[("SKILL.md", b"b")]);
+        install_skill_from_tarball(
+            dir.path(),
+            Harness::ClaudeCode,
+            "b",
+            "0.1.0",
+            "https://example.test/b",
+            &gz2,
+            OverwriteAction::Skip,
+        )
+        .unwrap();
+
+        remove_skill(dir.path(), Harness::ClaudeCode, "a").unwrap();
+        let state = ProjectState::load(dir.path()).unwrap();
+        assert_eq!(state.installed_skills.len(), 1);
+        assert_eq!(state.installed_skills[0].name, "b");
+        assert!(!dir.path().join(".claude/skills/a").exists());
+        assert!(dir.path().join(".claude/skills/b").is_dir());
+    }
+
+    #[test]
+    fn remove_agents_md_drops_block_and_state_entry() {
+        let dir = TempDir::new().unwrap();
+        fs::write(dir.path().join("CLAUDE.md"), "# User\n").unwrap();
+        install_agents_md_snippet(
+            dir.path(),
+            Harness::ClaudeCode,
+            "integ",
+            "0.1.0",
+            "https://example.test/integ",
+            "snippet body",
+        )
+        .unwrap();
+
+        let found = remove_agents_md(dir.path(), Harness::ClaudeCode, "integ").unwrap();
+        assert!(found);
+
+        let md = fs::read_to_string(dir.path().join("CLAUDE.md")).unwrap();
+        assert!(md.contains("# User"));
+        assert!(!md.contains("instinctagents:start:integ"));
+        assert!(!md.contains("snippet body"));
+
+        let state = ProjectState::load(dir.path()).unwrap();
+        assert!(state.installed_agents_md.is_empty());
+    }
+
+    #[test]
+    fn remove_agents_md_missing_block_still_prunes_state() {
+        let dir = TempDir::new().unwrap();
+        // State entry exists but file has no matching delimiter pair
+        // (user-deleted the block by hand).
+        fs::write(
+            dir.path().join("CLAUDE.md"),
+            "# User content with no block here.\n",
+        )
+        .unwrap();
+        let mut state = ProjectState::default();
+        state.installed_agents_md.push(InstalledItem {
+            name: "orphan".into(),
+            version: "0.1.0".into(),
+            source_url: "https://example.test/orphan".into(),
+            install_path: None,
+            delimiter_id: Some("orphan".into()),
+        });
+        state.save(dir.path()).unwrap();
+
+        let found = remove_agents_md(dir.path(), Harness::ClaudeCode, "orphan").unwrap();
+        assert!(!found, "missing delimiter pair reported as not-found");
+        let after = ProjectState::load(dir.path()).unwrap();
+        assert!(after.installed_agents_md.is_empty());
+    }
+
+    #[test]
+    fn remove_agents_md_targets_codex_agents_md() {
+        let dir = TempDir::new().unwrap();
+        install_agents_md_snippet(
+            dir.path(),
+            Harness::Codex,
+            "integ",
+            "0.1.0",
+            "https://example.test/integ",
+            "snippet body",
+        )
+        .unwrap();
+        assert!(dir.path().join("AGENTS.md").exists());
+
+        let found = remove_agents_md(dir.path(), Harness::Codex, "integ").unwrap();
+        assert!(found);
+        let md = fs::read_to_string(dir.path().join("AGENTS.md")).unwrap();
+        assert!(!md.contains("instinctagents:start:integ"));
+    }
+
+    #[test]
+    fn remove_agents_md_preserves_unrelated_block() {
+        let dir = TempDir::new().unwrap();
+        install_agents_md_snippet(
+            dir.path(),
+            Harness::ClaudeCode,
+            "alpha",
+            "0.1.0",
+            "https://example.test/alpha",
+            "alpha body",
+        )
+        .unwrap();
+        install_agents_md_snippet(
+            dir.path(),
+            Harness::ClaudeCode,
+            "beta",
+            "0.1.0",
+            "https://example.test/beta",
+            "beta body",
+        )
+        .unwrap();
+
+        remove_agents_md(dir.path(), Harness::ClaudeCode, "beta").unwrap();
+        let md = fs::read_to_string(dir.path().join("CLAUDE.md")).unwrap();
+        assert!(md.contains("alpha body"));
+        assert!(!md.contains("beta body"));
+        let state = ProjectState::load(dir.path()).unwrap();
+        assert_eq!(state.installed_agents_md.len(), 1);
+        assert_eq!(state.installed_agents_md[0].name, "alpha");
     }
 
     #[test]

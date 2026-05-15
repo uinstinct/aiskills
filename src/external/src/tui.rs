@@ -6,6 +6,10 @@
 //!   integrations, multi-select with Space, per-row installed/compat
 //!   markers, Enter-triggered install, and an Overwrite/Skip/Rename modal
 //!   when a skill's target folder already exists.
+//! - US-013 fills in the Remove tab: rows sourced from `.instinctagents`,
+//!   multi-select with Space, Enter opens a "Remove N item(s)? [y/N]"
+//!   confirmation modal, y/Y runs the batch uninstall via
+//!   [`installer::remove_skill`] / [`installer::remove_agents_md`].
 
 use std::io::{self, IsTerminal, Stdout};
 use std::path::PathBuf;
@@ -215,24 +219,117 @@ fn make_row(
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RemoveRow {
+    pub(crate) kind: RowKind,
+    pub(crate) name: String,
+    pub(crate) version: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ConfirmModal {
+    pub(crate) count: usize,
+}
+
+#[derive(Debug)]
+pub(crate) struct RemoveTabState {
+    pub(crate) rows: Vec<RemoveRow>,
+    pub(crate) cursor: usize,
+    pub(crate) selected: Vec<bool>,
+    pub(crate) status: Option<StatusMsg>,
+    pub(crate) confirm: Option<ConfirmModal>,
+}
+
+impl RemoveTabState {
+    fn new(rows: Vec<RemoveRow>) -> Self {
+        let selected = vec![false; rows.len()];
+        Self {
+            rows,
+            cursor: 0,
+            selected,
+            status: None,
+            confirm: None,
+        }
+    }
+
+    fn refresh(&mut self, rows: Vec<RemoveRow>) {
+        let cursor = self.cursor.min(rows.len().saturating_sub(1));
+        self.selected = vec![false; rows.len()];
+        self.rows = rows;
+        self.cursor = cursor;
+    }
+
+    pub(crate) fn move_down(&mut self) {
+        if self.cursor + 1 < self.rows.len() {
+            self.cursor += 1;
+        }
+    }
+
+    pub(crate) fn move_up(&mut self) {
+        if self.cursor > 0 {
+            self.cursor -= 1;
+        }
+    }
+
+    pub(crate) fn toggle_selected(&mut self) {
+        if self.cursor < self.rows.len() {
+            let cur = self.selected[self.cursor];
+            self.selected[self.cursor] = !cur;
+        }
+    }
+
+    pub(crate) fn selected_rows(&self) -> Vec<&RemoveRow> {
+        self.rows
+            .iter()
+            .enumerate()
+            .filter_map(|(i, r)| if self.selected[i] { Some(r) } else { None })
+            .collect()
+    }
+}
+
+/// Pure: build Remove-tab rows from the project's installed-items state.
+/// Skills are listed first, then agents.md integrations.
+pub(crate) fn build_remove_rows(state: &ProjectState) -> Vec<RemoveRow> {
+    let mut out =
+        Vec::with_capacity(state.installed_skills.len() + state.installed_agents_md.len());
+    for s in &state.installed_skills {
+        out.push(RemoveRow {
+            kind: RowKind::Skill,
+            name: s.name.clone(),
+            version: s.version.clone(),
+        });
+    }
+    for a in &state.installed_agents_md {
+        out.push(RemoveRow {
+            kind: RowKind::AgentsMd,
+            name: a.name.clone(),
+            version: a.version.clone(),
+        });
+    }
+    out
+}
+
 pub struct App {
     current_tab: Tab,
     harness: Option<Harness>,
     project_root: PathBuf,
     should_quit: bool,
     add: AddTabState,
+    remove: RemoveTabState,
 }
 
 impl App {
     pub fn new(project_root: PathBuf, harness: Option<Harness>) -> Self {
         let state = ProjectState::load(&project_root).unwrap_or_default();
-        let rows = build_add_rows(catalog::SKILLS, catalog::AGENTS_MD, &state, harness);
+        let add_rows = build_add_rows(catalog::SKILLS, catalog::AGENTS_MD, &state, harness);
+        let remove_rows = build_remove_rows(&state);
         Self {
             current_tab: Tab::Add,
             harness,
             project_root,
             should_quit: false,
-            add: AddTabState::new(rows),
+            add: AddTabState::new(add_rows),
+            remove: RemoveTabState::new(remove_rows),
         }
     }
 
@@ -257,6 +354,10 @@ impl App {
             self.handle_modal_key(code);
             return;
         }
+        if self.remove.confirm.is_some() && self.current_tab == Tab::Remove {
+            self.handle_remove_confirm_key(code);
+            return;
+        }
         match code {
             KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
             KeyCode::Tab => {
@@ -271,26 +372,26 @@ impl App {
             KeyCode::Char('2') => self.select_tab(1),
             KeyCode::Char('3') => self.select_tab(2),
             KeyCode::Char('4') => self.select_tab(3),
-            KeyCode::Up => {
-                if self.current_tab == Tab::Add && !self.tab_disabled(Tab::Add) {
-                    self.add.move_up();
-                }
-            }
-            KeyCode::Down => {
-                if self.current_tab == Tab::Add && !self.tab_disabled(Tab::Add) {
-                    self.add.move_down();
-                }
-            }
-            KeyCode::Char(' ') => {
-                if self.current_tab == Tab::Add && !self.tab_disabled(Tab::Add) {
-                    self.add.toggle_selected();
-                }
-            }
-            KeyCode::Enter => {
-                if self.current_tab == Tab::Add && !self.tab_disabled(Tab::Add) {
-                    self.trigger_install();
-                }
-            }
+            KeyCode::Up => match self.current_tab {
+                Tab::Add if !self.tab_disabled(Tab::Add) => self.add.move_up(),
+                Tab::Remove if !self.tab_disabled(Tab::Remove) => self.remove.move_up(),
+                _ => {}
+            },
+            KeyCode::Down => match self.current_tab {
+                Tab::Add if !self.tab_disabled(Tab::Add) => self.add.move_down(),
+                Tab::Remove if !self.tab_disabled(Tab::Remove) => self.remove.move_down(),
+                _ => {}
+            },
+            KeyCode::Char(' ') => match self.current_tab {
+                Tab::Add if !self.tab_disabled(Tab::Add) => self.add.toggle_selected(),
+                Tab::Remove if !self.tab_disabled(Tab::Remove) => self.remove.toggle_selected(),
+                _ => {}
+            },
+            KeyCode::Enter => match self.current_tab {
+                Tab::Add if !self.tab_disabled(Tab::Add) => self.trigger_install(),
+                Tab::Remove if !self.tab_disabled(Tab::Remove) => self.trigger_remove(),
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -309,6 +410,19 @@ impl App {
         if let Some(action) = action {
             self.add.modal = None;
             self.run_pending_installs(action);
+        }
+    }
+
+    fn handle_remove_confirm_key(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                self.remove.confirm = None;
+                self.run_pending_removals();
+            }
+            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc | KeyCode::Enter => {
+                self.remove.confirm = None;
+            }
+            _ => {}
         }
     }
 
@@ -427,6 +541,92 @@ impl App {
         self.add.refresh(rows);
     }
 
+    fn refresh_remove_rows(&mut self) {
+        let state = ProjectState::load(&self.project_root).unwrap_or_default();
+        let rows = build_remove_rows(&state);
+        self.remove.refresh(rows);
+    }
+
+    fn trigger_remove(&mut self) {
+        let count = self.remove.selected_rows().len();
+        if count == 0 {
+            self.remove.status = Some(StatusMsg::Info("Nothing selected.".into()));
+            return;
+        }
+        self.remove.confirm = Some(ConfirmModal { count });
+    }
+
+    fn run_pending_removals(&mut self) {
+        let Some(harness) = self.harness else { return };
+        let project_root = self.project_root.clone();
+
+        let pending: Vec<RemoveRow> = self
+            .remove
+            .selected_rows()
+            .into_iter()
+            .cloned()
+            .collect();
+
+        let mut removed = 0usize;
+        let mut warnings: Vec<String> = Vec::new();
+        let mut errors: Vec<String> = Vec::new();
+
+        for row in &pending {
+            match row.kind {
+                RowKind::Skill => match installer::remove_skill(&project_root, harness, &row.name)
+                {
+                    Ok(()) => removed += 1,
+                    Err(e) => errors.push(format!("{}: {}", row.name, e)),
+                },
+                RowKind::AgentsMd => {
+                    match installer::remove_agents_md(&project_root, harness, &row.name) {
+                        Ok(true) => removed += 1,
+                        Ok(false) => {
+                            removed += 1;
+                            warnings.push(format!(
+                                "{}: delimiter block missing — state cleaned",
+                                row.name
+                            ));
+                        }
+                        Err(e) => errors.push(format!("{}: {}", row.name, e)),
+                    }
+                }
+            }
+        }
+
+        // Refresh BOTH tab views so the Add tab's [installed] markers stay in
+        // sync after a removal.
+        self.refresh_remove_rows();
+        self.refresh_add_rows();
+
+        let mut parts: Vec<String> = Vec::new();
+        if removed > 0 {
+            parts.push(format!("removed {removed}"));
+        }
+        if !warnings.is_empty() {
+            parts.push(format!("{} warning(s)", warnings.len()));
+        }
+        if errors.is_empty() {
+            let mut msg = if parts.is_empty() {
+                "Done.".to_string()
+            } else {
+                parts.join(", ")
+            };
+            if !warnings.is_empty() {
+                msg.push_str(": ");
+                msg.push_str(&warnings.join("; "));
+            }
+            self.remove.status = Some(StatusMsg::Info(msg));
+        } else {
+            let mut msg = parts.join(", ");
+            if !msg.is_empty() {
+                msg.push_str("; ");
+            }
+            msg.push_str(&format!("{} error(s): {}", errors.len(), errors.join("; ")));
+            self.remove.status = Some(StatusMsg::Error(msg));
+        }
+    }
+
     fn tab_disabled(&self, tab: Tab) -> bool {
         tab.requires_harness() && self.harness.is_none()
     }
@@ -506,6 +706,11 @@ fn ui(f: &mut Frame, app: &App) {
             render_conflict_modal(f, modal);
         }
     }
+    if app.current_tab == Tab::Remove {
+        if let Some(confirm) = &app.remove.confirm {
+            render_confirm_modal(f, confirm);
+        }
+    }
 }
 
 fn render_header(f: &mut Frame, app: &App, area: Rect) {
@@ -562,7 +767,8 @@ fn render_body(f: &mut Frame, app: &App, area: Rect) {
 
     match app.current_tab {
         Tab::Add => render_add(f, app, area),
-        Tab::Remove | Tab::List | Tab::Update => {
+        Tab::Remove => render_remove(f, app, area),
+        Tab::List | Tab::Update => {
             let body_text = format!("{} tab (placeholder)", app.current_tab.title());
             let body = Paragraph::new(Span::raw(body_text)).block(
                 Block::default()
@@ -572,6 +778,67 @@ fn render_body(f: &mut Frame, app: &App, area: Rect) {
             f.render_widget(body, area);
         }
     }
+}
+
+fn render_remove(f: &mut Frame, app: &App, area: Rect) {
+    let body_area = Block::default()
+        .borders(Borders::ALL)
+        .title("Remove — [Space] toggle  [Enter] remove");
+    let inner = body_area.inner(area);
+    f.render_widget(body_area, area);
+
+    if app.remove.rows.is_empty() {
+        let p = Paragraph::new("Nothing installed in this project.")
+            .style(Style::default().fg(Color::DarkGray));
+        f.render_widget(p, inner);
+        return;
+    }
+
+    let mut items: Vec<ListItem> = Vec::with_capacity(app.remove.rows.len() + 2);
+    let mut last_kind: Option<RowKind> = None;
+    for (idx, row) in app.remove.rows.iter().enumerate() {
+        if last_kind != Some(row.kind) {
+            let header = match row.kind {
+                RowKind::Skill => "── Skills ──",
+                RowKind::AgentsMd => "── agents.md ──",
+            };
+            items.push(ListItem::new(Span::styled(
+                header,
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            )));
+            last_kind = Some(row.kind);
+        }
+        let mark = if app.remove.selected[idx] { "[x]" } else { "[ ]" };
+        let text = format!("{mark} {} v{}", row.name, row.version);
+        items.push(ListItem::new(text));
+    }
+
+    let mut list_state = ListState::default();
+    list_state.select(Some(remove_cursor_to_list_index(
+        &app.remove.rows,
+        app.remove.cursor,
+    )));
+
+    let list = List::new(items).highlight_style(
+        Style::default()
+            .bg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    );
+    f.render_stateful_widget(list, inner, &mut list_state);
+}
+
+fn remove_cursor_to_list_index(rows: &[RemoveRow], cursor: usize) -> usize {
+    let mut idx = cursor;
+    let mut last_kind: Option<RowKind> = None;
+    for (i, r) in rows.iter().enumerate() {
+        if last_kind != Some(r.kind) {
+            if i <= cursor {
+                idx += 1;
+            }
+            last_kind = Some(r.kind);
+        }
+    }
+    idx
 }
 
 fn render_add(f: &mut Frame, app: &App, area: Rect) {
@@ -685,6 +952,13 @@ fn render_footer(f: &mut Frame, app: &App, area: Rect) {
             "[Tab] switch".into(),
             "[q/Esc] quit".into(),
         ],
+        Tab::Remove => vec![
+            "[↑/↓] move".into(),
+            "[Space] toggle".into(),
+            "[Enter] remove".into(),
+            "[Tab] switch".into(),
+            "[q/Esc] quit".into(),
+        ],
         _ => vec![
             "[Tab/Shift+Tab] switch".into(),
             "[1-4] jump".into(),
@@ -697,16 +971,46 @@ fn render_footer(f: &mut Frame, app: &App, area: Rect) {
     let footer = Paragraph::new(Line::from(parts.join("   ")));
     f.render_widget(footer, split[0]);
 
-    if app.current_tab == Tab::Add {
-        if let Some(msg) = &app.add.status {
-            let (text, style) = match msg {
-                StatusMsg::Info(s) => (s.as_str(), Style::default().fg(Color::Green)),
-                StatusMsg::Error(s) => (s.as_str(), Style::default().fg(Color::Red)),
-            };
-            let toast = Paragraph::new(Span::styled(text, style)).wrap(Wrap { trim: true });
-            f.render_widget(toast, split[1]);
-        }
+    let status = match app.current_tab {
+        Tab::Add => app.add.status.as_ref(),
+        Tab::Remove => app.remove.status.as_ref(),
+        _ => None,
+    };
+    if let Some(msg) = status {
+        let (text, style) = match msg {
+            StatusMsg::Info(s) => (s.as_str(), Style::default().fg(Color::Green)),
+            StatusMsg::Error(s) => (s.as_str(), Style::default().fg(Color::Red)),
+        };
+        let toast = Paragraph::new(Span::styled(text, style)).wrap(Wrap { trim: true });
+        f.render_widget(toast, split[1]);
     }
+}
+
+fn render_confirm_modal(f: &mut Frame, modal: &ConfirmModal) {
+    let area = centered_rect(50, 25, f.area());
+    f.render_widget(Clear, area);
+
+    let plural = if modal.count == 1 { "item" } else { "items" };
+    let lines = vec![
+        Line::from(Span::styled(
+            format!("Remove {} {}?", modal.count, plural),
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "[y] yes   [N] no (default)   [Esc] cancel",
+            Style::default().fg(Color::Cyan),
+        )),
+    ];
+    let widget = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Confirm removal")
+                .style(Style::default().fg(Color::Yellow)),
+        )
+        .wrap(Wrap { trim: false });
+    f.render_widget(widget, area);
 }
 
 fn render_conflict_modal(f: &mut Frame, modal: &ConflictModal) {
@@ -1096,6 +1400,216 @@ mod tests {
         assert!(s.contains("…"));
         // The body should be shorter than the full description.
         assert!(s.len() < 200);
+    }
+
+    // -- Remove tab tests -----------------------------------------------------
+
+    fn seed_state_with(skills: &[(&str, &str)], agents_md: &[(&str, &str)]) -> ProjectState {
+        ProjectState {
+            installed_skills: skills
+                .iter()
+                .map(|(n, v)| InstalledItem {
+                    name: (*n).to_string(),
+                    version: (*v).to_string(),
+                    source_url: "https://example.test".into(),
+                    install_path: Some(format!(".claude/skills/{}/", n)),
+                    delimiter_id: None,
+                })
+                .collect(),
+            installed_agents_md: agents_md
+                .iter()
+                .map(|(n, v)| InstalledItem {
+                    name: (*n).to_string(),
+                    version: (*v).to_string(),
+                    source_url: "https://example.test".into(),
+                    install_path: None,
+                    delimiter_id: Some((*n).to_string()),
+                })
+                .collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn build_remove_rows_lists_skills_then_agents_md() {
+        let state = seed_state_with(&[("a", "0.1.0")], &[("b", "0.2.0")]);
+        let rows = build_remove_rows(&state);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].kind, RowKind::Skill);
+        assert_eq!(rows[0].name, "a");
+        assert_eq!(rows[0].version, "0.1.0");
+        assert_eq!(rows[1].kind, RowKind::AgentsMd);
+        assert_eq!(rows[1].name, "b");
+    }
+
+    #[test]
+    fn build_remove_rows_empty_state_returns_empty() {
+        let state = ProjectState::default();
+        let rows = build_remove_rows(&state);
+        assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn remove_tab_state_toggle_select_works_on_any_row() {
+        let rows = vec![
+            RemoveRow {
+                kind: RowKind::Skill,
+                name: "x".into(),
+                version: "0.1.0".into(),
+            },
+            RemoveRow {
+                kind: RowKind::AgentsMd,
+                name: "y".into(),
+                version: "0.2.0".into(),
+            },
+        ];
+        let mut s = RemoveTabState::new(rows);
+        s.toggle_selected();
+        assert!(s.selected[0]);
+        s.move_down();
+        s.toggle_selected();
+        assert!(s.selected[1]);
+    }
+
+    #[test]
+    fn trigger_remove_with_nothing_selected_reports_info() {
+        let dir = TempDir::new().unwrap();
+        let state = seed_state_with(&[("foo", "0.1.0")], &[]);
+        state.save(dir.path()).unwrap();
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        app.current_tab = Tab::Remove;
+        app.trigger_remove();
+        match app.remove.status {
+            Some(StatusMsg::Info(s)) => assert!(s.contains("Nothing selected")),
+            other => panic!("expected Info, got {other:?}"),
+        }
+        assert!(app.remove.confirm.is_none());
+    }
+
+    #[test]
+    fn trigger_remove_with_selection_opens_confirm_modal() {
+        let dir = TempDir::new().unwrap();
+        let state = seed_state_with(&[("foo", "0.1.0")], &[("bar", "0.2.0")]);
+        state.save(dir.path()).unwrap();
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        app.current_tab = Tab::Remove;
+        app.remove.toggle_selected();
+        app.remove.move_down();
+        app.remove.toggle_selected();
+        app.trigger_remove();
+        let modal = app.remove.confirm.as_ref().expect("confirm modal opens");
+        assert_eq!(modal.count, 2);
+    }
+
+    #[test]
+    fn confirm_modal_n_cancels_without_running() {
+        let dir = TempDir::new().unwrap();
+        let state = seed_state_with(&[("foo", "0.1.0")], &[]);
+        state.save(dir.path()).unwrap();
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        app.current_tab = Tab::Remove;
+        app.remove.toggle_selected();
+        app.trigger_remove();
+        assert!(app.remove.confirm.is_some());
+        app.handle_key(KeyCode::Char('n'), KeyModifiers::NONE);
+        assert!(app.remove.confirm.is_none());
+        let on_disk = ProjectState::load(dir.path()).unwrap();
+        assert_eq!(
+            on_disk.installed_skills.len(),
+            1,
+            "n cancels — state must be untouched"
+        );
+    }
+
+    #[test]
+    fn confirm_modal_esc_cancels_without_running() {
+        let dir = TempDir::new().unwrap();
+        let state = seed_state_with(&[("foo", "0.1.0")], &[]);
+        state.save(dir.path()).unwrap();
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        app.current_tab = Tab::Remove;
+        app.remove.toggle_selected();
+        app.trigger_remove();
+        app.handle_key(KeyCode::Esc, KeyModifiers::NONE);
+        assert!(app.remove.confirm.is_none());
+        assert!(!app.should_quit, "Esc only cancels modal, not the app");
+        let on_disk = ProjectState::load(dir.path()).unwrap();
+        assert_eq!(on_disk.installed_skills.len(), 1);
+    }
+
+    #[test]
+    fn confirm_modal_y_runs_removals() {
+        let dir = TempDir::new().unwrap();
+        // Seed: a real skill folder + corresponding state entry.
+        std::fs::create_dir_all(dir.path().join(".claude/skills/foo")).unwrap();
+        std::fs::write(dir.path().join(".claude/skills/foo/SKILL.md"), b"# foo").unwrap();
+        let state = seed_state_with(&[("foo", "0.1.0")], &[]);
+        state.save(dir.path()).unwrap();
+
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        app.current_tab = Tab::Remove;
+        app.remove.toggle_selected();
+        app.trigger_remove();
+        app.handle_key(KeyCode::Char('y'), KeyModifiers::NONE);
+
+        assert!(app.remove.confirm.is_none());
+        assert!(
+            !dir.path().join(".claude/skills/foo").exists(),
+            "skill folder must be deleted"
+        );
+        let on_disk = ProjectState::load(dir.path()).unwrap();
+        assert!(on_disk.installed_skills.is_empty());
+        // Status should report success.
+        match &app.remove.status {
+            Some(StatusMsg::Info(s)) => assert!(s.contains("removed")),
+            other => panic!("expected Info status, got {other:?}"),
+        }
+        // Rows should refresh to empty after removal.
+        assert!(app.remove.rows.is_empty());
+    }
+
+    #[test]
+    fn remove_tab_disabled_without_harness_blocks_keys() {
+        let mut app = fresh_app(None);
+        app.current_tab = Tab::Remove;
+        assert!(app.tab_disabled(Tab::Remove));
+        // Space and Enter must be no-ops when disabled.
+        app.handle_key(KeyCode::Char(' '), KeyModifiers::NONE);
+        app.handle_key(KeyCode::Enter, KeyModifiers::NONE);
+        assert!(app.remove.confirm.is_none());
+    }
+
+    #[test]
+    fn remove_run_warns_when_block_missing_but_state_present() {
+        let dir = TempDir::new().unwrap();
+        // State references an agents.md entry whose CLAUDE.md has no matching
+        // delimiter pair.
+        std::fs::write(
+            dir.path().join("CLAUDE.md"),
+            "# user content with no instinctagents block\n",
+        )
+        .unwrap();
+        let state = seed_state_with(&[], &[("orphan", "0.1.0")]);
+        state.save(dir.path()).unwrap();
+
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        app.current_tab = Tab::Remove;
+        app.remove.toggle_selected();
+        app.trigger_remove();
+        app.handle_key(KeyCode::Char('y'), KeyModifiers::NONE);
+
+        match &app.remove.status {
+            Some(StatusMsg::Info(s)) => {
+                assert!(s.contains("removed 1"), "got {s:?}");
+                assert!(s.contains("warning"), "missing-delimiter should warn: {s:?}");
+            }
+            other => panic!("expected Info status, got {other:?}"),
+        }
+        let on_disk = ProjectState::load(dir.path()).unwrap();
+        assert!(
+            on_disk.installed_agents_md.is_empty(),
+            "state pruned even when delimiter missing"
+        );
     }
 
     #[test]
