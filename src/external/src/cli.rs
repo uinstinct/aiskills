@@ -219,11 +219,7 @@ pub fn is_compatible(entry: &CatalogEntry, harness: Harness) -> bool {
 /// [`CliError::Incompatible`] otherwise. Shared between the skill and
 /// agents.md branches of [`run_add`] so the AC "with --force succeeds;
 /// without --force is blocked" has a single chokepoint.
-pub fn check_compat(
-    entry: &CatalogEntry,
-    harness: Harness,
-    force: bool,
-) -> Result<(), CliError> {
+pub fn check_compat(entry: &CatalogEntry, harness: Harness, force: bool) -> Result<(), CliError> {
     if force || is_compatible(entry, harness) {
         return Ok(());
     }
@@ -680,8 +676,7 @@ mod tests {
         });
         let (has_skill, has_agents_md) = lookup_state("shared", &state);
         assert!(has_skill && has_agents_md);
-        let err =
-            resolve_item_type("shared", None, has_skill, has_agents_md).unwrap_err();
+        let err = resolve_item_type("shared", None, has_skill, has_agents_md).unwrap_err();
         assert!(matches!(err, CliError::AmbiguousItem { .. }));
     }
 }

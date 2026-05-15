@@ -22,9 +22,8 @@ struct Manifest {
 }
 
 fn main() {
-    let manifest_dir = PathBuf::from(
-        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"),
-    );
+    let manifest_dir =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"));
     let repo_root = manifest_dir
         .parent()
         .and_then(Path::parent)
@@ -77,9 +76,8 @@ fn scan_dir(repo_root: &Path, label: &str) -> Vec<(String, Manifest)> {
         let text = fs::read_to_string(&manifest_path)
             .unwrap_or_else(|e| panic!("failed to read {}: {}", manifest_path.display(), e));
 
-        let manifest: Manifest = serde_yaml::from_str(&text).unwrap_or_else(|e| {
-            panic!("malformed manifest at {}: {}", manifest_path.display(), e)
-        });
+        let manifest: Manifest = serde_yaml::from_str(&text)
+            .unwrap_or_else(|e| panic!("malformed manifest at {}: {}", manifest_path.display(), e));
 
         if manifest.name != folder_name {
             panic!(

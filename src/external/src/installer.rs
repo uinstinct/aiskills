@@ -101,9 +101,14 @@ pub enum OverwriteAction {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SkillInstallOutcome {
-    Installed { install_path: String },
+    Installed {
+        install_path: String,
+    },
     Skipped,
-    Renamed { install_path: String, new_name: String },
+    Renamed {
+        install_path: String,
+        new_name: String,
+    },
 }
 
 fn start_delim(name: &str) -> String {
@@ -287,8 +292,7 @@ pub fn install_skill_from_tarball(
                 // root is `<name>/`, so files land at `<scratch>/<name>/…`;
                 // we then move that subdirectory to `<new_name>` and drop the
                 // scratch dir.
-                let scratch =
-                    target_root.join(format!(".instinctagents.rename.{new_name}"));
+                let scratch = target_root.join(format!(".instinctagents.rename.{new_name}"));
                 if scratch.exists() {
                     fs::remove_dir_all(&scratch)?;
                 }
@@ -299,13 +303,7 @@ pub fn install_skill_from_tarball(
                 let _ = fs::remove_dir_all(&scratch);
 
                 let install_path = format!("{}{}/", harness.target_folder(), new_name);
-                upsert_skill_state(
-                    project_root,
-                    &new_name,
-                    version,
-                    source_url,
-                    &install_path,
-                )?;
+                upsert_skill_state(project_root, &new_name, version, source_url, &install_path)?;
                 return Ok(SkillInstallOutcome::Renamed {
                     install_path,
                     new_name,
@@ -445,11 +443,7 @@ pub fn remove_block_from_file(path: &Path, name: &str) -> io::Result<bool> {
 ///
 /// Missing folder is not an error — the state is still cleaned up so future
 /// installs work correctly.
-pub fn remove_skill(
-    project_root: &Path,
-    harness: Harness,
-    name: &str,
-) -> Result<(), InstallError> {
+pub fn remove_skill(project_root: &Path, harness: Harness, name: &str) -> Result<(), InstallError> {
     let skill_dir = project_root.join(harness.target_folder()).join(name);
     if skill_dir.exists() {
         fs::remove_dir_all(&skill_dir)?;
@@ -524,9 +518,7 @@ mod tests {
     use tempfile::TempDir;
 
     fn block_for(name: &str, body: &str) -> String {
-        format!(
-            "<!-- instinctagents:start:{name} -->\n{body}\n<!-- instinctagents:end:{name} -->"
-        )
+        format!("<!-- instinctagents:start:{name} -->\n{body}\n<!-- instinctagents:end:{name} -->")
     }
 
     #[test]
@@ -551,7 +543,10 @@ mod tests {
     fn upsert_block_appends_blank_line_even_when_no_trailing_newline() {
         let original = "# Project\n\nSome user prose.";
         let out = upsert_block(original, "foo", "snippet body");
-        let expected = format!("# Project\n\nSome user prose.\n\n{}\n", block_for("foo", "snippet body"));
+        let expected = format!(
+            "# Project\n\nSome user prose.\n\n{}\n",
+            block_for("foo", "snippet body")
+        );
         assert_eq!(out, expected);
     }
 
@@ -689,7 +684,8 @@ mod tests {
                 header.set_mode(0o644);
                 header.set_cksum();
                 let path = format!("{root}/{rel}");
-                tb.append_data(&mut header, &path, Cursor::new(body)).unwrap();
+                tb.append_data(&mut header, &path, Cursor::new(body))
+                    .unwrap();
             }
             tb.finish().unwrap();
         }
@@ -737,10 +733,7 @@ mod tests {
         assert_eq!(entry.name, "demo");
         assert_eq!(entry.version, "0.3.0");
         assert_eq!(entry.source_url, "https://example.test/demo");
-        assert_eq!(
-            entry.install_path.as_deref(),
-            Some(".claude/skills/demo/")
-        );
+        assert_eq!(entry.install_path.as_deref(), Some(".claude/skills/demo/"));
         assert!(entry.delimiter_id.is_none());
     }
 
@@ -873,16 +866,17 @@ mod tests {
             OverwriteAction::Skip,
         )
         .unwrap();
-        assert!(dir
-            .path()
-            .join(".opencode/skills/demo/SKILL.md")
-            .exists());
+        assert!(dir.path().join(".opencode/skills/demo/SKILL.md").exists());
     }
 
     #[test]
     fn skill_target_exists_reports_target_state() {
         let dir = TempDir::new().unwrap();
-        assert!(!skill_target_exists(dir.path(), Harness::ClaudeCode, "demo"));
+        assert!(!skill_target_exists(
+            dir.path(),
+            Harness::ClaudeCode,
+            "demo"
+        ));
         fs::create_dir_all(dir.path().join(".claude/skills/demo")).unwrap();
         assert!(skill_target_exists(dir.path(), Harness::ClaudeCode, "demo"));
     }

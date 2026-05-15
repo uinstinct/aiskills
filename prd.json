@@ -483,8 +483,8 @@
         "Workflow runs green on a sample PR"
       ],
       "priority": 28,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": ".github/workflows/ci.yml landed with three jobs on ubuntu-latest, triggered on pull_request and push to main: (1) `rust` runs checkout (actions/checkout@v4) -> dtolnay/rust-toolchain@stable (with rustfmt + clippy components) -> Swatinem/rust-cache@v2 -> `cargo fmt --all -- --check` -> `cargo clippy --all-targets -- -D warnings` -> `cargo test --all-targets`; (2) `python` runs actions/setup-python@v5 (3.11) -> `python -m py_compile src/internal/*.py`; (3) `shell` runs `shellcheck install.sh` (ubuntu-latest has shellcheck preinstalled). Pre-flight to make `cargo fmt --check` actually pass: ran `cargo fmt --all` once across the repo — the prior stories used `cargo clippy --all-targets -- -D warnings` as the typecheck gate (per progress.txt) and never enforced rustfmt, so the formatter had ~18 small whitespace/wrap diffs across build.rs, src/external/src/{cli,http,installer,tui,update}.rs, and src/external/tests/{common/mod,helpers_smoke,install_remove}.rs. After fmt: clippy --all-targets -D warnings clean and `cargo test` 166 green (144 unit + 6 helpers_smoke + 4 tui_exit + 12 cli_args + ... unchanged totals). CI fails on any non-zero exit by default. AC 'Workflow runs green on a sample PR' is structural-only this iteration (no live PR run) — same precedent as the slash-command stories (US-025/026/027) where manual verification is deferred."
     },
     {
       "id": "US-029",

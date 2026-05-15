@@ -23,18 +23,14 @@ use tempfile::TempDir;
 
 pub fn fake_claude_project() -> TempDir {
     let dir = TempDir::new().expect("create tempdir for fake claude project");
-    fs::write(
-        dir.path().join("CLAUDE.md"),
-        "# Test Claude Code project\n",
-    )
-    .expect("write CLAUDE.md");
+    fs::write(dir.path().join("CLAUDE.md"), "# Test Claude Code project\n")
+        .expect("write CLAUDE.md");
     dir
 }
 
 pub fn fake_codex_project() -> TempDir {
     let dir = TempDir::new().expect("create tempdir for fake codex project");
-    fs::write(dir.path().join("AGENTS.md"), "# Test Codex project\n")
-        .expect("write AGENTS.md");
+    fs::write(dir.path().join("AGENTS.md"), "# Test Codex project\n").expect("write AGENTS.md");
     dir
 }
 

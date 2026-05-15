@@ -543,12 +543,7 @@ impl App {
         let Some(harness) = self.harness else { return };
         let project_root = self.project_root.clone();
 
-        let pending: Vec<AddRow> = self
-            .add
-            .selected_rows()
-            .into_iter()
-            .cloned()
-            .collect();
+        let pending: Vec<AddRow> = self.add.selected_rows().into_iter().cloned().collect();
 
         let mut installed = 0usize;
         let mut skipped = 0usize;
@@ -641,12 +636,7 @@ impl App {
         let Some(harness) = self.harness else { return };
         let project_root = self.project_root.clone();
 
-        let pending: Vec<RemoveRow> = self
-            .remove
-            .selected_rows()
-            .into_iter()
-            .cloned()
-            .collect();
+        let pending: Vec<RemoveRow> = self.remove.selected_rows().into_iter().cloned().collect();
 
         let mut removed = 0usize;
         let mut warnings: Vec<String> = Vec::new();
@@ -654,11 +644,12 @@ impl App {
 
         for row in &pending {
             match row.kind {
-                RowKind::Skill => match installer::remove_skill(&project_root, harness, &row.name)
-                {
-                    Ok(()) => removed += 1,
-                    Err(e) => errors.push(format!("{}: {}", row.name, e)),
-                },
+                RowKind::Skill => {
+                    match installer::remove_skill(&project_root, harness, &row.name) {
+                        Ok(()) => removed += 1,
+                        Err(e) => errors.push(format!("{}: {}", row.name, e)),
+                    }
+                }
                 RowKind::AgentsMd => {
                     match installer::remove_agents_md(&project_root, harness, &row.name) {
                         Ok(true) => removed += 1,
@@ -779,10 +770,7 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> io::Re
     Ok(())
 }
 
-fn event_loop(
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    app: &mut App,
-) -> io::Result<()> {
+fn event_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> io::Result<()> {
     while !app.should_quit {
         terminal.draw(|f| ui(f, app))?;
         if let Event::Key(key) = event::read()? {
@@ -798,7 +786,11 @@ fn ui(f: &mut Frame, app: &App) {
     // AC: "On binary launch (any tab) print one-line 'update available'
     // notice at top if applicable". The banner sits between the harness
     // header and the tabs row so it's visible regardless of the active tab.
-    let banner_height = if app.update_status.is_available() { 1 } else { 0 };
+    let banner_height = if app.update_status.is_available() {
+        1
+    } else {
+        0
+    };
 
     let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -851,8 +843,11 @@ fn render_header(f: &mut Frame, app: &App, area: Rect) {
         Some(Harness::OpenCode) => ("Harness: OpenCode", Style::default().fg(Color::Green)),
         None => ("No harness detected", Style::default().fg(Color::Yellow)),
     };
-    let header = Paragraph::new(Span::styled(label, style))
-        .block(Block::default().borders(Borders::ALL).title("instinctagents"));
+    let header = Paragraph::new(Span::styled(label, style)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("instinctagents"),
+    );
     f.render_widget(header, area);
 }
 
@@ -911,7 +906,10 @@ fn render_update(f: &mut Frame, app: &App, area: Rect) {
 
     let lines: Vec<Line> = match &app.update_status {
         UpdateStatus::UpToDate { current } => vec![Line::from(Span::styled(
-            format!("You are on the latest version (v{}).", current.trim_start_matches('v')),
+            format!(
+                "You are on the latest version (v{}).",
+                current.trim_start_matches('v')
+            ),
             Style::default().fg(Color::Green),
         ))],
         UpdateStatus::Available {
@@ -956,8 +954,7 @@ fn render_list(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(body_area, area);
 
     if app.list.is_empty() {
-        let p =
-            Paragraph::new("Nothing installed.").style(Style::default().fg(Color::DarkGray));
+        let p = Paragraph::new("Nothing installed.").style(Style::default().fg(Color::DarkGray));
         f.render_widget(p, inner);
         return;
     }
@@ -972,7 +969,9 @@ fn render_list(f: &mut Frame, app: &App, area: Rect) {
             };
             items.push(ListItem::new(Span::styled(
                 header,
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             )));
             last_kind = Some(row.kind);
         }
@@ -1023,11 +1022,17 @@ fn render_remove(f: &mut Frame, app: &App, area: Rect) {
             };
             items.push(ListItem::new(Span::styled(
                 header,
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             )));
             last_kind = Some(row.kind);
         }
-        let mark = if app.remove.selected[idx] { "[x]" } else { "[ ]" };
+        let mark = if app.remove.selected[idx] {
+            "[x]"
+        } else {
+            "[ ]"
+        };
         let text = format!("{mark} {} v{}", row.name, row.version);
         items.push(ListItem::new(text));
     }
@@ -1083,7 +1088,9 @@ fn render_add(f: &mut Frame, app: &App, area: Rect) {
             };
             items.push(ListItem::new(Span::styled(
                 header,
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             )));
             last_kind = Some(row.kind);
         }
@@ -1541,12 +1548,7 @@ mod tests {
         // first catalog skill since the embedded catalog has at least one
         // entry (example-skill from US-001).
         let skill_name = catalog::SKILLS[0].name;
-        std::fs::create_dir_all(
-            project_root
-                .join(".claude/skills")
-                .join(skill_name),
-        )
-        .unwrap();
+        std::fs::create_dir_all(project_root.join(".claude/skills").join(skill_name)).unwrap();
 
         let mut app = App::new(project_root, Some(Harness::ClaudeCode));
         // Find the row for the seeded skill and select it.
@@ -1820,7 +1822,10 @@ mod tests {
         match &app.remove.status {
             Some(StatusMsg::Info(s)) => {
                 assert!(s.contains("removed 1"), "got {s:?}");
-                assert!(s.contains("warning"), "missing-delimiter should warn: {s:?}");
+                assert!(
+                    s.contains("warning"),
+                    "missing-delimiter should warn: {s:?}"
+                );
             }
             other => panic!("expected Info status, got {other:?}"),
         }

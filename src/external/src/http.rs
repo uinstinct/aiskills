@@ -17,8 +17,11 @@ const GITHUB_API_BASE_URL: &str = "https://api.github.com";
 
 /// User-Agent header the GitHub API requires. GitHub rejects requests
 /// without a UA; this is the public identifier of the running binary.
-const USER_AGENT: &str =
-    concat!("instinctagents/", env!("CARGO_PKG_VERSION"), " (+https://github.com/uinstinct/aiskills)");
+const USER_AGENT: &str = concat!(
+    "instinctagents/",
+    env!("CARGO_PKG_VERSION"),
+    " (+https://github.com/uinstinct/aiskills)"
+);
 
 /// Errors returned by the HTTP layer.
 #[derive(Debug)]
@@ -99,9 +102,7 @@ pub fn download_release_asset_from(
             Ok(buf)
         }
         Err(ureq::Error::Status(404, _)) => Err(HttpError::AssetNotFound { url }),
-        Err(ureq::Error::Status(status, _)) => {
-            Err(HttpError::UnexpectedStatus { url, status })
-        }
+        Err(ureq::Error::Status(status, _)) => Err(HttpError::UnexpectedStatus { url, status }),
         Err(ureq::Error::Transport(_)) => Err(HttpError::NetworkUnreachable { url }),
     }
 }
@@ -141,9 +142,7 @@ pub fn fetch_latest_release_json_from(base_url: &str, repo: &str) -> Result<Stri
             .into_string()
             .map_err(|_| HttpError::BodyRead { url: url.clone() }),
         Err(ureq::Error::Status(404, _)) => Err(HttpError::AssetNotFound { url }),
-        Err(ureq::Error::Status(status, _)) => {
-            Err(HttpError::UnexpectedStatus { url, status })
-        }
+        Err(ureq::Error::Status(status, _)) => Err(HttpError::UnexpectedStatus { url, status }),
         Err(ureq::Error::Transport(_)) => Err(HttpError::NetworkUnreachable { url }),
     }
 }

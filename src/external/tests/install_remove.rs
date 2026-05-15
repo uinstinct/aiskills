@@ -18,9 +18,7 @@ use instinctagents::installer::{
 };
 use instinctagents::state::ProjectState;
 
-use common::{
-    build_skill_tarball, fake_claude_project, fake_codex_project, fake_opencode_project,
-};
+use common::{build_skill_tarball, fake_claude_project, fake_codex_project, fake_opencode_project};
 
 const SKILL_NAME: &str = "demo";
 const SKILL_VERSION: &str = "0.1.0";
@@ -65,10 +63,7 @@ fn install_skill_into_fake_claude_project() {
 
     let skill_md = project.path().join(".claude/skills/demo/SKILL.md");
     assert!(skill_md.is_file(), "expected .claude/skills/demo/SKILL.md");
-    assert_eq!(
-        fs::read_to_string(&skill_md).unwrap(),
-        "# demo skill body"
-    );
+    assert_eq!(fs::read_to_string(&skill_md).unwrap(), "# demo skill body");
 
     let state = ProjectState::load(project.path()).unwrap();
     assert_eq!(state.installed_skills.len(), 1);
@@ -144,7 +139,10 @@ fn install_agents_md_into_fake_claude_project_preserves_user_content() {
     let project = fake_claude_project();
     let target = project.path().join("CLAUDE.md");
     let pre_existing = fs::read_to_string(&target).expect("seed CLAUDE.md present");
-    assert!(!pre_existing.is_empty(), "fake_claude_project seeds content");
+    assert!(
+        !pre_existing.is_empty(),
+        "fake_claude_project seeds content"
+    );
 
     install_agents_md_from_tarball(
         project.path(),
@@ -243,7 +241,10 @@ fn remove_skill_deletes_folder_and_updates_state() {
     .unwrap();
     assert!(project.path().join(".claude/skills/demo").is_dir());
     assert_eq!(
-        ProjectState::load(project.path()).unwrap().installed_skills.len(),
+        ProjectState::load(project.path())
+            .unwrap()
+            .installed_skills
+            .len(),
         1
     );
 
@@ -271,8 +272,7 @@ fn remove_agents_md_drops_delimited_block_and_preserves_user_content() {
     )
     .unwrap();
 
-    let found =
-        remove_agents_md(project.path(), Harness::ClaudeCode, INTEG_NAME).unwrap();
+    let found = remove_agents_md(project.path(), Harness::ClaudeCode, INTEG_NAME).unwrap();
     assert!(found, "block must be found and removed");
 
     let after = fs::read_to_string(&target).unwrap();
@@ -314,7 +314,10 @@ fn install_with_target_exists_skip_leaves_original_alone() {
     .unwrap();
     assert_eq!(outcome, SkillInstallOutcome::Skipped);
 
-    assert!(target.join("KEEP").is_file(), "skip preserves the existing folder");
+    assert!(
+        target.join("KEEP").is_file(),
+        "skip preserves the existing folder"
+    );
     assert!(
         !target.join("SKILL.md").exists(),
         "skip must not extract on top of the existing folder"
@@ -347,7 +350,10 @@ fn install_with_target_exists_overwrite_replaces_existing() {
     .unwrap();
     assert!(matches!(outcome, SkillInstallOutcome::Installed { .. }));
 
-    assert!(target.join("SKILL.md").is_file(), "overwrite extracts the new tarball");
+    assert!(
+        target.join("SKILL.md").is_file(),
+        "overwrite extracts the new tarball"
+    );
     assert!(
         !target.join("OLD").exists(),
         "overwrite removes the previous folder first"

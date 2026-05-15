@@ -284,7 +284,10 @@ mod tests {
             called.set(true);
             Ok("v9.9.9".into())
         });
-        assert!(!called.get(), "fetcher must NOT be called when cache is fresh");
+        assert!(
+            !called.get(),
+            "fetcher must NOT be called when cache is fresh"
+        );
         match status {
             UpdateStatus::Available { latest, .. } => assert_eq!(latest, "v0.5.0"),
             other => panic!("expected Available, got {other:?}"),
@@ -348,9 +351,7 @@ mod tests {
         seed.save(dir.path()).unwrap();
 
         let status = check(dir.path(), "u/r", "0.1.0", now, || {
-            Err(HttpError::NetworkUnreachable {
-                url: "x".into(),
-            })
+            Err(HttpError::NetworkUnreachable { url: "x".into() })
         });
         // Falls back to the cached value rather than going Unknown.
         match status {
@@ -360,10 +361,7 @@ mod tests {
 
         // Cache must not have been clobbered with a new timestamp.
         let loaded = ProjectState::load(dir.path()).unwrap();
-        assert_eq!(
-            loaded.last_update_check,
-            Some(now - Duration::hours(48))
-        );
+        assert_eq!(loaded.last_update_check, Some(now - Duration::hours(48)));
         assert_eq!(loaded.latest_known_version.as_deref(), Some("v0.4.0"));
     }
 
@@ -372,9 +370,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let now = Utc.with_ymd_and_hms(2026, 5, 15, 12, 0, 0).unwrap();
         let status = check(dir.path(), "u/r", "0.1.0", now, || {
-            Err(HttpError::NetworkUnreachable {
-                url: "x".into(),
-            })
+            Err(HttpError::NetworkUnreachable { url: "x".into() })
         });
         assert!(matches!(status, UpdateStatus::Unknown { .. }));
     }
@@ -385,9 +381,7 @@ mod tests {
         // error type. We don't actually run a panicking fetcher (panics
         // would unwind), but we can assert the return type by inspection
         // here: `check` returns UpdateStatus, never Result.
-        fn assert_return_type<F: FnOnce() -> Result<String, HttpError>>(
-            _: F,
-        ) -> &'static str {
+        fn assert_return_type<F: FnOnce() -> Result<String, HttpError>>(_: F) -> &'static str {
             "UpdateStatus"
         }
         let _ = assert_return_type(|| Ok(String::new()));

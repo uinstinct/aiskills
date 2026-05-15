@@ -49,8 +49,7 @@ fn fake_opencode_project_seeds_opencode_json() {
         "fake_opencode_project() must seed opencode.json"
     );
     assert!(
-        !project.path().join("CLAUDE.md").exists()
-            && !project.path().join("AGENTS.md").exists(),
+        !project.path().join("CLAUDE.md").exists() && !project.path().join("AGENTS.md").exists(),
         "fake_opencode_project() must not seed higher-priority signals"
     );
 }
@@ -58,8 +57,7 @@ fn fake_opencode_project_seeds_opencode_json() {
 #[test]
 fn mock_github_releases_serves_asset_at_expected_path() {
     let body: &[u8] = b"hello-release-asset";
-    let releases =
-        common::mock_github_releases("v0.1.0", &[("instinctagents-linux-x86_64", body)]);
+    let releases = common::mock_github_releases("v0.1.0", &[("instinctagents-linux-x86_64", body)]);
 
     let url = releases.url();
     assert!(url.starts_with("http://"), "mock url should be http://...");
@@ -79,9 +77,7 @@ fn mock_github_releases_serves_asset_at_expected_path() {
     .expect("write request");
 
     let mut response = String::new();
-    stream
-        .read_to_string(&mut response)
-        .expect("read response");
+    stream.read_to_string(&mut response).expect("read response");
 
     assert!(
         response.contains("200 OK"),
