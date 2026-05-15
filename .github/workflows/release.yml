@@ -69,10 +69,42 @@ jobs:
           name: instinctagents-macos-arm64
           path: dist/instinctagents-macos-arm64
 
+  build-macos-x86_64:
+    # Cross-compile for Intel Macs on the same macos-14 (Apple Silicon) runner
+    # rather than spinning up a separate macos-13 runner, to keep runner costs low.
+    name: Build macOS x86_64 binary
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo build --release
+        run: cargo build --release --target x86_64-apple-darwin
+
+      - name: Strip and rename binary
+        run: |
+          strip target/x86_64-apple-darwin/release/instinctagents
+          mkdir -p dist
+          cp target/x86_64-apple-darwin/release/instinctagents dist/instinctagents-macos-x86_64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: instinctagents-macos-x86_64
+          path: dist/instinctagents-macos-x86_64
+
   release:
     name: Package and publish release
     runs-on: ubuntu-latest
-    needs: [build-linux-x86_64, build-macos-arm64]
+    needs: [build-linux-x86_64, build-macos-arm64, build-macos-x86_64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -93,5 +125,6 @@ jobs:
           files: |
             dist/instinctagents-linux-x86_64
             dist/instinctagents-macos-arm64
+            dist/instinctagents-macos-x86_64
             dist/skill-*.tar.gz
             dist/agents-md-*.tar.gz
