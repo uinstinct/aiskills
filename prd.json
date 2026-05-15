@@ -35,8 +35,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "docs/manifest-schema.md created with full field reference, validation rules, and example manifests for both skills and agents.md integrations."
     },
     {
       "id": "US-003",

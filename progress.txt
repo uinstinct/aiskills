@@ -1,0 +1,21 @@
+## Codebase Patterns
+- Registry repo layout: skills/<name>/, agents.md/<name>/, src/external/ (Rust CLI), src/internal/ (Python ingest scripts), docs/, scripts/, .github/workflows/.
+- Top-level mapping.yml is the registry catalog; build script (US-005) will walk per-entry manifest.yml files to bake the offline catalog into the CLI binary.
+- Two manifest variants share core fields (name, description, version, harness_compatibility) but each gets one optional type-specific field: skills -> entrypoint (default SKILL.md); agents.md -> snippet_file (default snippet.md).
+- `name` in manifest.yml MUST equal the parent folder basename — this invariant is relied on by both the build script and the install/remove paths.
+- Allowed harness_compatibility values are exactly: claude-code, codex, opencode. Empty list / omitted = compatible with all.
+- prd.json is the source of truth for story state. After completing a story, flip `passes: true` and update `notes` with what was delivered.
+- Branch: ralph/instinctagents (already checked out). Commit per story with `feat: [US-ID] - [Title]`.
+- No Rust project bootstrapped yet (that's US-004), so "typecheck passes" for early documentation stories is satisfied trivially — no compile step exists to break.
+
+## 2026-05-15 - US-002
+- Wrote docs/manifest-schema.md with full field reference, validation rules, and example manifest files for both skill and agents.md integrations.
+- Files changed:
+  - docs/manifest-schema.md (new)
+  - prd.json (US-002 passes -> true)
+- **Learnings for future iterations:**
+  - The existing example manifests at skills/example-skill/manifest.yml and agents.md/example-integration/manifest.yml already follow the schema (name+description+version+harness_compatibility+entrypoint/snippet_file). Future stories can reuse them verbatim as test fixtures for the build-time validator (US-005).
+  - US-001 was committed already; folder layout and mapping.yml are in place, but no docs/ folder existed before this story — created it here.
+  - No Cargo project exists yet, so "Typecheck passes" is vacuous for documentation-only stories. US-004 will introduce the actual `cargo check` gate.
+  - prd.json story notes field is a good place to leave a one-line "what shipped" pointer for later stories that need to consume earlier output (e.g. US-005 will read docs/manifest-schema.md as the contract it must enforce).
+---
