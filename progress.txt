@@ -1,3 +1,12 @@
+## 2026-05-15 - US-011
+- What was implemented: Updated `.github/workflows/ci.yml` python job to replace `actions/setup-python@v5` + `python -m py_compile` with `astral-sh/setup-uv@v3`, `uv sync --frozen --project src/internal`, and a smoke test via `uv run --project src/internal python src/internal/skill_list.py`. No pip references remain in ci.yml.
+- Files changed: `.github/workflows/ci.yml`
+- **Learnings for future iterations:**
+  - `astral-sh/setup-uv@v3` installs uv on the runner without needing `actions/setup-python` — uv manages Python itself
+  - `uv sync --frozen` will fail if uv.lock is out of sync, catching any lockfile drift in CI
+  - The smoke test (`skill_list.py`) validates both uv can resolve deps and the script runs — more useful than bare py_compile
+---
+
 ## 2026-05-15 - US-010
 - What was implemented: Updated all six `.opencode/commands/*.md` files to replace `python src/internal/<script>.py $ARGUMENTS` with `uv run --project src/internal python src/internal/<script>.py $ARGUMENTS`. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output. No pip/venv references remain in any OpenCode command file.
 - Files changed: `.opencode/commands/skill-add.md`, `.opencode/commands/skill-list.md`, `.opencode/commands/skill-remove.md`, `.opencode/commands/agents-md-add.md`, `.opencode/commands/agents-md-list.md`, `.opencode/commands/agents-md-remove.md`
