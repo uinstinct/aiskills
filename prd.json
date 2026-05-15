@@ -453,8 +453,8 @@
         "Typecheck passes"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Six Codex skill folders landed under .codex/skills/ — skill-add, skill-remove, skill-list, agents-md-add, agents-md-remove, agents-md-list. Each carries a SKILL.md with YAML frontmatter (`name:` matching the folder + slash-command name; `description:` copied verbatim from the matching .claude/commands/<name>.md frontmatter per the cross-harness identical-UX rule from US-025). Bodies are Codex-shaped: phrased as 'When the user asks to <action>, invoke the <script>' (rather than Claude Code's $ARGUMENTS placeholder pattern), with the same argument shape documentation + same stdout/stderr surface contract as the Claude commands. Filenames + descriptions are intentionally identical across US-025/026/027 (per US-025's learning) so the three harnesses present the same UX; only the invocation phrasing differs. Quality: `python -m py_compile src/internal/*.py` clean. Manual Codex-session verification deferred per the slash-command exception (same as US-010/012/013/014/025 manual-verification exception); SKILL.md frontmatter shape matches the project's own `skills/example-skill/SKILL.md` (which is itself the canonical skill-file form for this registry)."
     },
     {
       "id": "US-027",
