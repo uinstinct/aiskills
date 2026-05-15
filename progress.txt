@@ -1,4 +1,7 @@
 ## Codebase Patterns
+- Integration tests live at src/external/tests/*.rs (each file is its own crate). The shared helper module is src/external/tests/common/mod.rs, included into each test file via `mod common;`. Add new helpers there rather than duplicating per-file. Note: tests/common/mod.rs carries `#![allow(dead_code)]` because each test file only uses a subset of the helpers and Rust would otherwise warn about the unused ones under `-D warnings`.
+- Test helpers (US-007): `common::fake_claude_project()`, `common::fake_codex_project()`, `common::fake_opencode_project()` each return a `tempfile::TempDir` seeded with the minimal harness signal (CLAUDE.md / AGENTS.md / opencode.json). `common::mock_github_releases(tag, &[(asset_name, &[u8])])` returns a `MockReleases { server: ServerGuard, _mocks: Vec<Mock> }` — the `_mocks` field MUST stay alive (mockito Mock removes itself from the server on drop). Use `.url()` to get the base URL.
+- Dev-dependency stack: tempfile (US-006), mockito 1, assert_cmd 2, predicates 3 (all added in US-007). Use `assert_cmd::Command::cargo_bin("instinctagents")` to invoke the built binary from integration tests; combine with `predicates::str::contains` for stdout assertions.
 - Harness detection contract (US-006): `harness::detect(&Path) -> Option<Harness>` with priority ClaudeCode > Codex > OpenCode (first match wins). Signals — ClaudeCode: CLAUDE.md file OR .claude/ dir; Codex: AGENTS.md file OR .codex/ dir; OpenCode: opencode.json|opencode.jsonc file OR .opencode/ dir. Use `Harness::target_folder()` for skill install path and `Harness::agents_md_file()` for the harness-specific instruction file (Codex AND OpenCode both use AGENTS.md — don't assume the file name is unique to a harness).
 - `tempfile` is a dev-dependency in src/external/Cargo.toml — reuse `tempfile::TempDir` for any fs-touching unit test instead of hand-rolling temp dirs. US-007's tests/common helpers will return `TempDir`s built on top of this.
 - Module stubs follow a convention: each src/external/src/<mod>.rs starts with `//!` doc naming the story that fills it in. When implementing a stub, update the doc comment to past tense ("Implemented in US-XYZ.") rather than removing it; `#![allow(dead_code)]` at the top is fine while later stories aren't yet consuming the items (remove it as soon as consumers appear).
@@ -13,6 +16,28 @@
 - Rust module skeleton at src/external/src/: main.rs (entrypoint, declares all sibling mods), cli.rs, tui.rs, harness.rs, catalog.rs, installer.rs, state.rs, update.rs, http.rs. Each stub carries a one-line `//!` doc comment naming the story that fills it in — keep that convention when adding new modules. catalog.rs has `#![allow(dead_code)]` because the embedded constants aren't referenced yet; remove that attribute once US-010+ start consuming them.
 - Embedded catalog API: `catalog::CatalogEntry { name, description, version, harness_compatibility: &[&str], source_path }` and two `pub const` slices `catalog::SKILLS` and `catalog::AGENTS_MD`. Entries are sorted by folder name (BTreeMap iteration) so the generated file is deterministic across builds.
 - build.rs locates the workspace root via `CARGO_MANIFEST_DIR/../..`. Any future build-script work must preserve this relationship — keep src/external/ exactly two levels under repo root.
+
+## 2026-05-15 - US-007
+- Built reusable integration-test infrastructure: tempdir-backed fake projects for all three harnesses plus a mockito-backed GitHub Releases mock helper.
+- Files changed:
+  - src/external/Cargo.toml (added dev-deps: mockito = "1", assert_cmd = "2", predicates = "3")
+  - src/external/tests/common/mod.rs (new — fake_claude_project/fake_codex_project/fake_opencode_project returning TempDir; mock_github_releases(tag, assets) returning a MockReleases guard that retains the mockito Mock vec alongside the ServerGuard)
+  - src/external/tests/helpers_smoke.rs (new — 4 smoke tests, one per helper; uses assert_cmd to run the binary inside the fake Claude project and raw TCP GET to verify the mock server's body + 200 OK)
+  - Cargo.lock (regenerated for new dev-deps: mockito + hyper/tokio transitive chain, assert_cmd, predicates)
+  - prd.json (US-007 passes -> true)
+- Quality gates:
+  - `cargo check --all-targets` clean
+  - `cargo clippy --all-targets -- -D warnings` clean
+  - `cargo test` — 14 unit + 4 integration tests, all passing
+  - `cargo build --release` produced target/release/instinctagents
+- **Learnings for future iterations:**
+  - mockito 1.x: `Server::new()` returns a `ServerGuard` (NOT bare `Server`); `server.mock(...).create()` returns a `Mock` whose Drop impl unregisters the mock from the server. If you don't retain the Mock, requests will 501/404. Keep a `Vec<Mock>` field on any wrapper struct — see `MockReleases._mocks` for the pattern.
+  - Each file in src/external/tests/ is compiled as its own crate, so any helper used by only some tests will trip `dead_code` under `-D warnings`. Put `#![allow(dead_code)]` at the top of tests/common/mod.rs and keep it there; this is structural, not a sign of unused code.
+  - For HTTP smoke checks against the mock server we avoided pulling in a client crate (ureq comes in US-008). A raw `TcpStream` + manual `GET / HTTP/1.1\r\nHost: ...\r\nConnection: close\r\n\r\n` works fine for asserting status + body, and surfaces real failures (no TLS, no chunked encoding to worry about with mockito's defaults).
+  - `assert_cmd::Command::cargo_bin("instinctagents")` Just Works from the workspace; no manual path management needed. Pair with `.current_dir(tempdir.path())` to scope binary invocations to a fake project.
+  - mockito brings hyper + tokio in as dev-only transitive deps. Adds ~40s to a clean test build the first time, but doesn't affect the release binary. Subsequent `cargo test` runs are fast (incremental).
+  - The `MockReleases` wrapper deliberately holds `ServerGuard` (not `Server`) so the server shuts down when the test ends. Don't substitute `Server` here — it would leak listener threads across tests.
+---
 
 ## 2026-05-15 - US-006
 - Implemented the harness detection module: `Harness { ClaudeCode, Codex, OpenCode }` with `target_folder()` and `agents_md_file()` accessors, plus `detect(&Path) -> Option<Harness>` using ClaudeCode > Codex > OpenCode priority.

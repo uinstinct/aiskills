@@ -116,11 +116,8 @@
         "Tests pass (cargo test)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-008",
+      "passes": true,
+      "notes": "Added mockito, assert_cmd, predicates as dev-dependencies in src/external/Cargo.toml (tempfile already present from US-006). Created tests/common/mod.rs exposing fake_claude_project/fake_codex_project/fake_opencode_project returning TempDir, plus mock_github_releases(tag, &[(asset_name, &[u8])]) returning a MockReleases guard (mockito::ServerGuard + retained Mock vec). tests/helpers_smoke.rs has 4 smoke tests — one per helper — including an assert_cmd run of the instinctagents binary inside the fake Claude project and a raw TCP GET against the mock server verifying body + 200 OK. cargo check/clippy --all-targets -D warnings/test/build --release all green."
       "title": "HTTP layer downloading from GitHub Releases",
       "description": "As a developer, I want a centralized HTTP layer that downloads skill/snippet files from the registry's GitHub Releases so installation works in any environment.",
       "acceptanceCriteria": [
