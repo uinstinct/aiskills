@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- HTTP layer contract (US-008): `http::download_release_asset(repo, tag, asset_name) -> Result<Vec<u8>, HttpError>` fetches https://github.com/<repo>/releases/download/<tag>/<asset_name>. `download_release_asset_from(base_url, repo, tag, asset_name)` is the same call with the base URL injected — use it in tests against mockito. HttpError variants: AssetNotFound (404), NetworkUnreachable (Transport error), UnexpectedStatus { status }, BodyRead. Don't add a separate "network unreachable" check at call sites — match the variant.
+- TLS backend is target-split in src/external/Cargo.toml: Linux uses `ureq { features = ["rustls"] }` (the shipped binary per US-017/US-030); non-Linux uses `native-tls`. The release artifact remains rustls-only — this split is purely a dev-env workaround for hosts where ring's C build chain (ranlib/CLT) is unavailable. http.rs is TLS-backend-agnostic — ureq's request API is identical. If CI (US-028) runs on macOS, it will use native-tls there; assert rustls is in effect on the linux-x86_64 release job (US-030).
 - Integration tests live at src/external/tests/*.rs (each file is its own crate). The shared helper module is src/external/tests/common/mod.rs, included into each test file via `mod common;`. Add new helpers there rather than duplicating per-file. Note: tests/common/mod.rs carries `#![allow(dead_code)]` because each test file only uses a subset of the helpers and Rust would otherwise warn about the unused ones under `-D warnings`.
 - Test helpers (US-007): `common::fake_claude_project()`, `common::fake_codex_project()`, `common::fake_opencode_project()` each return a `tempfile::TempDir` seeded with the minimal harness signal (CLAUDE.md / AGENTS.md / opencode.json). `common::mock_github_releases(tag, &[(asset_name, &[u8])])` returns a `MockReleases { server: ServerGuard, _mocks: Vec<Mock> }` — the `_mocks` field MUST stay alive (mockito Mock removes itself from the server on drop). Use `.url()` to get the base URL.
 - Dev-dependency stack: tempfile (US-006), mockito 1, assert_cmd 2, predicates 3 (all added in US-007). Use `assert_cmd::Command::cargo_bin("instinctagents")` to invoke the built binary from integration tests; combine with `predicates::str::contains` for stdout assertions.
@@ -16,6 +18,28 @@
 - Rust module skeleton at src/external/src/: main.rs (entrypoint, declares all sibling mods), cli.rs, tui.rs, harness.rs, catalog.rs, installer.rs, state.rs, update.rs, http.rs. Each stub carries a one-line `//!` doc comment naming the story that fills it in — keep that convention when adding new modules. catalog.rs has `#![allow(dead_code)]` because the embedded constants aren't referenced yet; remove that attribute once US-010+ start consuming them.
 - Embedded catalog API: `catalog::CatalogEntry { name, description, version, harness_compatibility: &[&str], source_path }` and two `pub const` slices `catalog::SKILLS` and `catalog::AGENTS_MD`. Entries are sorted by folder name (BTreeMap iteration) so the generated file is deterministic across builds.
 - build.rs locates the workspace root via `CARGO_MANIFEST_DIR/../..`. Any future build-script work must preserve this relationship — keep src/external/ exactly two levels under repo root.
+
+## 2026-05-15 - US-008
+- Implemented the HTTP layer (src/external/src/http.rs): `download_release_asset(repo, tag, asset_name)` fetches GitHub release assets from `https://github.com/<repo>/releases/download/<tag>/<asset_name>`, returning `Vec<u8>` on success and a typed `HttpError` (`AssetNotFound` for 404, `NetworkUnreachable` for ureq Transport errors, `UnexpectedStatus` for other non-2xx, `BodyRead` for body-read I/O). Companion `download_release_asset_from(base_url, repo, tag, asset_name)` lets tests redirect at a mock server.
+- Files changed:
+  - src/external/Cargo.toml (added target-specific ureq dependency — Linux: rustls per US-008 AC; non-Linux: native-tls as a dev-env workaround, see Codebase Patterns)
+  - src/external/src/http.rs (filled out the US-004 stub: HttpError enum + Display + std::error::Error; two `pub fn` download helpers; four unit tests using mockito directly)
+  - Cargo.lock (regenerated; new deps depend on target)
+  - progress.txt + prd.json (this entry; US-008 passes -> true)
+- Quality gates:
+  - `cargo check --all-targets` clean
+  - `cargo clippy --all-targets -- -D warnings` clean
+  - `cargo test` — 22 passed (4 new in http::tests; 14 existing unit + 4 integration smoke all still green)
+  - `cargo build --release` produced target/release/instinctagents
+- **Learnings for future iterations:**
+  - ureq 2.x error model: `.call()` returns `Result<Response, ureq::Error>` where non-2xx HTTP statuses come back as `ureq::Error::Status(code, response)` (NOT `Ok`). 404 specifically maps to `AssetNotFound`; everything else is `UnexpectedStatus { status }`. Transport-layer errors (DNS, connection refused, TLS) come back as `ureq::Error::Transport(_)` → `NetworkUnreachable`. The `Response::into_reader()` step reads the body — fail it into `BodyRead`.
+  - The CLT ranlib on this dev macOS is permission-locked (`Operation not permitted` even from a normal shell). Anything that pulls in `ring` (or `aws-lc-rs`) for C-compiled crypto will fail to build locally. Workaround used: target-specific TLS features in Cargo.toml so the macOS host builds ureq with `native-tls` (Apple Security framework, no C compile). The Linux release build still uses rustls per the AC. Future stories adding more crypto/TLS deps (none on the roadmap) must keep this split or document equivalent fallback.
+  - mockito works fine from synchronous Rust tests: `mockito::Server::new()` spawns its own runtime internally and returns a `ServerGuard`. Use `server.url()` as the base URL, mock paths as `/owner/repo/releases/download/<tag>/<asset>` to mirror GitHub. Each test gets its own server — they don't share state.
+  - Don't put the http unit tests in tests/ — this is a binary crate (no `[lib]` target), so integration tests under tests/ can't reach internal modules. Keep test coverage as `#[cfg(test)] mod tests` inside src/external/src/http.rs. The US-007 `mock_github_releases` helper is for future install/remove integration tests that exec the binary; it doesn't fit the unit-test path here.
+  - GitHub's real release-download URL 302s to a signed CDN URL on a different host. ureq 2.x follows redirects by default (up to 5 hops). No special config needed, but be aware: any path that intentionally needs to NOT follow redirects must build a custom `Agent` with `.redirects(0)`.
+  - On macOS, `native-tls` brings in security-framework / core-foundation — first build adds ~5s, subsequent are fast. On Linux, rustls brings ring (and its C build) — that's the path CI exercises.
+  - `download_release_asset_from` accepts and tolerates a trailing slash on the base URL (`trim_end_matches('/')`). Callers don't need to normalize.
+---
 
 ## 2026-05-15 - US-007
 - Built reusable integration-test infrastructure: tempdir-backed fake projects for all three harnesses plus a mockito-backed GitHub Releases mock helper.

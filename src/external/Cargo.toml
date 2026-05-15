@@ -11,6 +11,18 @@ build = "build.rs"
 name = "instinctagents"
 path = "src/main.rs"
 
+# NOTE: The release artifact (Linux x86_64, see US-017/US-030) MUST use rustls
+# per US-008's AC ("smaller dep tree than reqwest"). On macOS hosts we fall
+# back to native-tls (Apple Security framework) so local development isn't
+# blocked by environments where ring's C build chain is unavailable. ureq's
+# request/response API is identical across both TLS backends, so http.rs
+# does not need to know which is active.
+[target.'cfg(target_os = "linux")'.dependencies]
+ureq = { version = "2", default-features = false, features = ["rustls"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+ureq = { version = "2", default-features = false, features = ["native-tls"] }
+
 [build-dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"

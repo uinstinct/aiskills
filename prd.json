@@ -118,6 +118,9 @@
       "priority": 7,
       "passes": true,
       "notes": "Added mockito, assert_cmd, predicates as dev-dependencies in src/external/Cargo.toml (tempfile already present from US-006). Created tests/common/mod.rs exposing fake_claude_project/fake_codex_project/fake_opencode_project returning TempDir, plus mock_github_releases(tag, &[(asset_name, &[u8])]) returning a MockReleases guard (mockito::ServerGuard + retained Mock vec). tests/helpers_smoke.rs has 4 smoke tests — one per helper — including an assert_cmd run of the instinctagents binary inside the fake Claude project and a raw TCP GET against the mock server verifying body + 200 OK. cargo check/clippy --all-targets -D warnings/test/build --release all green."
+    },
+    {
+      "id": "US-008",
       "title": "HTTP layer downloading from GitHub Releases",
       "description": "As a developer, I want a centralized HTTP layer that downloads skill/snippet files from the registry's GitHub Releases so installation works in any environment.",
       "acceptanceCriteria": [
@@ -130,8 +133,8 @@
         "Tests pass"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "http.rs implements `download_release_asset(repo, tag, asset_name) -> Result<Vec<u8>, HttpError>` (URL: https://github.com/<repo>/releases/download/<tag>/<asset_name>) plus a `download_release_asset_from(base, ...)` helper used by tests. HttpError variants: AssetNotFound (404), NetworkUnreachable (Transport), UnexpectedStatus, BodyRead. Cargo.toml uses target-specific TLS: Linux dependency `ureq = { features=[\"rustls\"] }` (per AC — the shipped binary is Linux x86_64); non-Linux host falls back to `native-tls` so local dev isn't blocked when ring's C build chain is unavailable (e.g. macOS CLT ranlib locked). ureq's API is identical across backends. Four unit tests in http.rs use mockito directly (the US-007 stack) to cover success, 404 -> AssetNotFound, URL construction, and trailing-slash tolerance. cargo check / clippy --all-targets -D warnings / test (22 passed) / build --release all green."
     },
     {
       "id": "US-009",
