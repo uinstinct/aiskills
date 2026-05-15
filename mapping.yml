@@ -2,14 +2,6 @@
 # Lists every skill and agents.md integration currently published in this registry.
 # See docs/mapping-schema.md for the schema.
 
-installed_skills:
-  - name: example-skill
-    version: 0.1.0
-    source_url: https://github.com/uinstinct/aiskills
-    install_path: skills/example-skill/
+installed_skills: []
 
-installed_agents_md:
-  - name: example-integration
-    version: 0.1.0
-    source_url: https://github.com/uinstinct/aiskills
-    install_path: agents.md/example-integration/
+installed_agents_md: []
