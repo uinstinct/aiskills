@@ -79,6 +79,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Overwrite existing skills/<name>/ or agents.md/<name>/ entries.",
     )
+    parser.add_argument(
+        "--as",
+        dest="as_kind",
+        choices=("skill", "agents-md", "both"),
+        default=None,
+        help=(
+            "For single-file blob/raw URLs, install as a skill, an "
+            "agents.md integration, or both. Without this flag the script "
+            "prompts on a TTY and otherwise infers from the filename "
+            "(SKILL.md -> skill, AGENTS.md/snippet.md -> agents-md)."
+        ),
+    )
     return parser
 
 
@@ -168,18 +180,50 @@ def _ingest_from_folder(
     )
 
 
+def _infer_kind_from_filename(filename: str) -> str | None:
+    """Return 'skill' or 'agents-md' if the filename is unambiguous, else None.
+
+    SKILL.md is the canonical skill entrypoint; AGENTS.md and snippet.md
+    are the canonical agents.md filenames. Anything else is ambiguous
+    and the caller should prompt or fail.
+    """
+    lower = filename.lower()
+    if lower == "skill.md":
+        return "skill"
+    if lower in ("agents.md", "snippet.md"):
+        return "agents-md"
+    return None
+
+
 def _ingest_from_single_file(
-    parsed: ParsedGithubUrl, source_url: str, force: bool
+    parsed: ParsedGithubUrl, source_url: str, force: bool, as_kind: str | None
 ) -> int:
     assert parsed.ref is not None
     filename = parsed.path.rsplit("/", 1)[-1]
     if not filename:
         raise IngestError(f"raw URL points to a directory, not a file: {source_url}")
-    name_hint = filename.rsplit(".", 1)[0] if "." in filename else filename
-    target_kind = prompt_choice(
-        f"Add {filename!r} as:",
-        ["skill", "agents-md", "both"],
-    )
+    # For canonical entrypoint filenames (SKILL.md, AGENTS.md, snippet.md)
+    # the filename itself is not a useful name — prefer the parent folder.
+    parent = parsed.path.rsplit("/", 2)[-2] if "/" in parsed.path else ""
+    if filename.lower() in ("skill.md", "agents.md", "snippet.md") and parent:
+        name_hint = parent
+    else:
+        name_hint = filename.rsplit(".", 1)[0] if "." in filename else filename
+    if as_kind is not None:
+        target_kind = as_kind
+    elif sys.stdin.isatty():
+        target_kind = prompt_choice(
+            f"Add {filename!r} as:",
+            ["skill", "agents-md", "both"],
+        )
+    else:
+        inferred = _infer_kind_from_filename(filename)
+        if inferred is None:
+            raise IngestError(
+                f"cannot infer install kind for {filename!r} without a TTY; "
+                "re-run with --as skill | --as agents-md | --as both"
+            )
+        target_kind = inferred
     body = fetch_raw_file(parsed.owner, parsed.repo, parsed.ref, parsed.path)
     actions: list[str] = (
         ["skill", "agents-md"] if target_kind == "both" else [target_kind]
@@ -344,22 +388,19 @@ def _print_summary(
 # ---------------------------------------------------------------------------
 
 
-_DISPATCH = {
-    "repo": _ingest_from_repo,
-    "folder": _ingest_from_folder,
-    "blob": _ingest_from_single_file,
-    "raw": _ingest_from_single_file,
-}
-
-
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         parsed = parse_github_url(args.url)
-        handler = _DISPATCH.get(parsed.kind)
-        if handler is None:
-            raise IngestError(f"unsupported URL kind: {parsed.kind}")
-        return handler(parsed, args.url, args.force)
+        if parsed.kind == "repo":
+            return _ingest_from_repo(parsed, args.url, args.force)
+        if parsed.kind == "folder":
+            return _ingest_from_folder(parsed, args.url, args.force)
+        if parsed.kind in ("blob", "raw"):
+            return _ingest_from_single_file(
+                parsed, args.url, args.force, args.as_kind
+            )
+        raise IngestError(f"unsupported URL kind: {parsed.kind}")
     except IngestError as exc:
         fail(str(exc))
     return 0
