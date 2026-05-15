@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """List every agents.md integration currently in the registry.
 
-Reads ``mapping.yml`` and prints the ``installed_agents_md`` section in
-either a text table or JSON. US-019 ships the basic implementation along
-with the skeleton; US-024 polishes if needed.
+Reads ``mapping.yml`` and prints a tabular (default) or JSON
+(``--json``) listing of the ``installed_agents_md`` section.
 """
 
 from __future__ import annotations
