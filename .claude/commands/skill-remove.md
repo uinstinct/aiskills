@@ -8,7 +8,7 @@ Run the skill-remove script with the user-provided arguments.
 Invoke:
 
 ```bash
-python src/internal/skill_remove.py $ARGUMENTS
+uv run --project src/internal python src/internal/skill_remove.py $ARGUMENTS
 ```
 
 Arguments:

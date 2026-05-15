@@ -8,7 +8,7 @@ Run the agents-md-list script with the user-provided arguments.
 Invoke:
 
 ```bash
-python src/internal/agents_md_list.py $ARGUMENTS
+uv run --project src/internal python src/internal/agents_md_list.py $ARGUMENTS
 ```
 
 Arguments (all optional):

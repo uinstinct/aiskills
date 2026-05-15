@@ -8,7 +8,7 @@ Run the agents-md-remove script with the user-provided arguments.
 Invoke:
 
 ```bash
-python src/internal/agents_md_remove.py $ARGUMENTS
+uv run --project src/internal python src/internal/agents_md_remove.py $ARGUMENTS
 ```
 
 Arguments:

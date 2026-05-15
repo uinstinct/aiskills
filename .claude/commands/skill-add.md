@@ -8,7 +8,7 @@ Run the skill-add script with the user-provided arguments.
 Invoke:
 
 ```bash
-python src/internal/skill_add.py $ARGUMENTS
+uv run --project src/internal python src/internal/skill_add.py $ARGUMENTS
 ```
 
 Arguments:

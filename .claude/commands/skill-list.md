@@ -8,7 +8,7 @@ Run the skill-list script with the user-provided arguments.
 Invoke:
 
 ```bash
-python src/internal/skill_list.py $ARGUMENTS
+uv run --project src/internal python src/internal/skill_list.py $ARGUMENTS
 ```
 
 Arguments (all optional):
