@@ -10,7 +10,7 @@ Supports the **Claude Code**, **Codex**, and **OpenCode** harnesses.
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/instinctagents/instinctagents/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/uinstinct/aiskills/main/install.sh | bash
 ```
 
 This downloads the latest release binary into the current directory as `./instinctagents`.

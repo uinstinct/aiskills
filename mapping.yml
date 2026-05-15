@@ -5,11 +5,11 @@
 installed_skills:
   - name: example-skill
     version: 0.1.0
-    source_url: https://github.com/instinctagents/instinctagents
+    source_url: https://github.com/uinstinct/aiskills
     install_path: skills/example-skill/
 
 installed_agents_md:
   - name: example-integration
     version: 0.1.0
-    source_url: https://github.com/instinctagents/instinctagents
+    source_url: https://github.com/uinstinct/aiskills
     install_path: agents.md/example-integration/
