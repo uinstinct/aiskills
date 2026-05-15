@@ -82,8 +82,8 @@
         "Typecheck passes (cargo clippy -- -D warnings)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "build.rs (with serde + serde_yaml build-dependencies) walks <repo>/skills/*/manifest.yml and <repo>/agents.md/*/manifest.yml, parses each, validates folder/name match and harness_compatibility values, and writes catalog_generated.rs into OUT_DIR. catalog.rs defines `CatalogEntry` and includes the generated file to expose `pub const SKILLS` and `pub const AGENTS_MD`. Unit tests assert both sections are non-empty and contain the US-001 example entries. cargo check, cargo clippy --all-targets -- -D warnings, cargo test, and cargo build --release all pass."
     },
     {
       "id": "US-006",
