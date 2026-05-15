@@ -53,7 +53,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: shellcheck
-        run: shellcheck install.sh scripts/package-release-assets.sh scripts/test-package-release-assets.sh
+        run: shellcheck install.sh scripts/package-release-assets.sh scripts/test-package-release-assets.sh scripts/test-install.sh
 
       - name: package-release-assets smoke test
         run: ./scripts/test-package-release-assets.sh
+
+      - name: install.sh platform detection tests
+        run: ./scripts/test-install.sh
