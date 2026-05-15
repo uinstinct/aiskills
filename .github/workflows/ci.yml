@@ -37,13 +37,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
 
-      - name: py_compile internal scripts
-        run: python -m py_compile src/internal/*.py
+      - name: uv sync
+        run: uv sync --frozen --project src/internal
+
+      - name: Smoke test skill_list.py
+        run: uv run --project src/internal python src/internal/skill_list.py
 
   shell:
     name: Shell lint
