@@ -1,0 +1,525 @@
+{
+  "project": "instinctagents",
+  "branchName": "ralph/instinctagents",
+  "description": "instinctagents - A two-part Skill & agents.md registry: a single-binary Rust CLI with TUI for installing/removing cataloged skills + agents.md snippets in any project, plus an agentic internal tool for maintainers to ingest entries from GitHub URLs into the registry repo. Supports Claude Code, Codex, and OpenCode harnesses.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create registry repo directory layout",
+      "description": "As a maintainer, I want the registry repo to have the canonical folder layout so all subsequent code has a stable place to write to.",
+      "acceptanceCriteria": [
+        "Top-level folders exist: skills/, agents.md/, src/internal/, src/external/, .github/workflows/",
+        "Top-level mapping.yml exists with empty lists: installed_skills: [], installed_agents_md: []",
+        "Root README.md explains registry purpose, curl install command (placeholder URL), basic usage",
+        ".gitignore excludes /target, *.tmp, build artifacts",
+        "Example skill skills/example-skill/ exists with SKILL.md and manifest.yml (placeholder content ok)",
+        "Example agents.md integration agents.md/example-integration/ exists with snippet.md and manifest.yml",
+        "mapping.yml references both example entries so catalog is non-empty",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Define and document manifest.yml schema",
+      "description": "As a developer, I need a documented, validated schema for each skill and agents.md integration's manifest.yml so the build process and tools can rely on its shape.",
+      "acceptanceCriteria": [
+        "docs/manifest-schema.md documents every field with name, type, required/optional, example, description",
+        "Required fields documented: name (string, must match folder name), description (string), version (semver string)",
+        "Optional fields documented: harness_compatibility (array of claude-code/codex/opencode; empty/omitted means all)",
+        "Skill manifests documented to support optional entrypoint (string, default SKILL.md)",
+        "agents.md manifests documented to support optional snippet_file (string, default snippet.md)",
+        "Example manifest files for both skill and agents.md integration included in the doc",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Define and document mapping.yml schema",
+      "description": "As a developer, I need a documented schema for mapping.yml so the internal tool's scripts can produce and consume it deterministically.",
+      "acceptanceCriteria": [
+        "docs/mapping-schema.md documents mapping.yml's structure",
+        "Top-level keys documented: installed_skills (list), installed_agents_md (list)",
+        "Each entry documented with fields: name, version, source_url, install_path (e.g. skills/example-skill/)",
+        "Example valid mapping.yml included in the doc",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Cargo project setup with module skeleton",
+      "description": "As a developer, I want a working Cargo project with module structure so subsequent stories have a clear place to add code.",
+      "acceptanceCriteria": [
+        "src/external/Cargo.toml with package name instinctagents, edition 2021, binary target",
+        "Standalone or workspace layout (recommend workspace so internal Python lives in src/internal/ without polluting Cargo)",
+        "Module skeleton under src/external/src/: main.rs, cli.rs, tui.rs, harness.rs, catalog.rs, installer.rs, state.rs, update.rs, http.rs",
+        "cargo check passes",
+        "cargo build --release produces a binary",
+        "cargo clippy -- -D warnings passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Build script bakes catalog metadata into binary",
+      "description": "As a developer, I want the catalog (list of all skill and agents.md manifests) embedded into the binary at compile time so the tool works offline for browsing.",
+      "acceptanceCriteria": [
+        "src/external/build.rs walks skills/*/manifest.yml and agents.md/*/manifest.yml from repo root",
+        "All manifests aggregated into a single structure exposed via generated .rs file in OUT_DIR (include! style)",
+        "Aggregate has two sections: skills and agents_md; each entry has name, description, version, harness_compatibility, source_path",
+        "Missing/malformed manifest causes build failure with a clear error identifying the offending file",
+        "Unit test verifies embedded catalog is non-empty and contains the example entries from US-001",
+        "Typecheck passes (cargo clippy -- -D warnings)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Harness detection module",
+      "description": "As a developer, I want the tool to detect the active coding-agent harness based on project files so it installs to the right folder.",
+      "acceptanceCriteria": [
+        "harness.rs exports enum Harness { ClaudeCode, Codex, OpenCode } and fn detect(project_root: &Path) -> Option<Harness>",
+        "Detection priority (first match wins): CLAUDE.md OR .claude/ -> ClaudeCode; AGENTS.md OR .codex/ -> Codex; opencode.json(c) OR .opencode/ -> OpenCode",
+        "Returns None if no signal matches",
+        "harness.target_folder() returns: ClaudeCode -> .claude/skills/; Codex -> .codex/skills/; OpenCode -> .opencode/skills/",
+        "harness.agents_md_file() returns: ClaudeCode -> CLAUDE.md; Codex -> AGENTS.md; OpenCode -> AGENTS.md",
+        "Unit tests cover all three positive cases, priority ordering when multiple signals coexist, and the None case",
+        "Typecheck passes (cargo clippy -- -D warnings)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Test infrastructure - mock HTTP and tempdir fake projects",
+      "description": "As a developer, I want reusable test infrastructure so subsequent integration tests can run in isolation.",
+      "acceptanceCriteria": [
+        "Dev-dependency added: mockito or wiremock for HTTP mocking",
+        "Dev-dependencies added: assert_cmd, predicates, tempfile",
+        "Helper module tests/common/mod.rs exposes: fake_claude_project() -> TempDir, fake_codex_project() -> TempDir, fake_opencode_project() -> TempDir",
+        "Helper mock_github_releases(tag, assets) -> Server returns a running mock server",
+        "At least one smoke test uses each helper and passes",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Tests pass (cargo test)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "HTTP layer downloading from GitHub Releases",
+      "description": "As a developer, I want a centralized HTTP layer that downloads skill/snippet files from the registry's GitHub Releases so installation works in any environment.",
+      "acceptanceCriteria": [
+        "http.rs uses ureq with rustls feature (smaller dep tree than reqwest)",
+        "Function download_release_asset(repo: &str, tag: &str, asset_name: &str) -> Result<Bytes> exists",
+        "Fetch URL: https://github.com/<owner>/<repo>/releases/download/<tag>/<asset_name>",
+        "404 surfaces as 'asset not found' error; network failure as 'failed to reach github.com'",
+        "Tests use mock HTTP server from US-007 to verify success and 404 paths",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "State file (.instinctagents) read/write",
+      "description": "As a developer, I need a small state file in target projects so the tool knows what's installed without scanning the filesystem.",
+      "acceptanceCriteria": [
+        "state.rs defines ProjectState { installed_skills: Vec<InstalledItem>, installed_agents_md: Vec<InstalledItem>, last_update_check: Option<DateTime<Utc>>, latest_known_version: Option<String> }",
+        "InstalledItem fields: name, version, source_url, install_path (skills) OR delimiter_id (agents.md, equal to skill name)",
+        "File format: TOML; path <project_root>/.instinctagents",
+        "ProjectState::load(project_root) returns default empty state if file missing",
+        "ProjectState::save(project_root) writes atomically (write to temp + rename)",
+        "Same file stores auto-update cache fields (last_update_check, latest_known_version)",
+        "Unit tests cover: load-missing, load-existing, save-and-roundtrip",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "TUI scaffolding with tabs",
+      "description": "As a user, I want a single TUI with tabs for Add / Remove / List / Update so I can do all operations from one interface.",
+      "acceptanceCriteria": [
+        "ratatui used for full-screen TUI; crossterm for input",
+        "Four tabs: Add, Remove, List, Update; switchable with Tab / Shift+Tab or number keys 1-4",
+        "Header bar shows detected harness or warning 'No harness detected'; when no harness, Add and Remove are disabled",
+        "Footer bar shows context-sensitive keybindings",
+        "q or Esc exits cleanly with terminal state restored",
+        "Empty placeholder content in each tab is acceptable for this story",
+        "Integration test launches the binary, sends 'q', asserts exit code 0",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Manual verification in terminal (TUI is exception to dev-browser rule)"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Inject agents.md snippet with delimiters",
+      "description": "As a user, when I install an agents.md integration, the snippet must be injected into the project's harness instruction file with machine-parseable delimiters so it can be cleanly removed later.",
+      "acceptanceCriteria": [
+        "Target file determined from harness.agents_md_file() (e.g. CLAUDE.md)",
+        "If target file does not exist, create it",
+        "Append to end of file (with one blank line before) using delimiters: <!-- instinctagents:start:<name> --> ... <!-- instinctagents:end:<name> -->",
+        "If a block with the same <name> already exists, replace it in place (no duplicate)",
+        "Never modify any content outside the delimiter pair",
+        "Update .instinctagents with new entry",
+        "Unit tests cover: fresh file, file with unrelated user content preserved verbatim, existing block of same name replaced, multiple existing blocks (only matching one affected)",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add tab - list, multi-select, install skills and agents.md",
+      "description": "As a user, I want to browse the catalog in the Add tab and install one or more skills/snippets at once.",
+      "acceptanceCriteria": [
+        "Two-section layout: skills section and agents.md integrations section",
+        "Each row shows: name, version, truncated description, harness-compat tag, [installed] marker if present in .instinctagents",
+        "Rows incompatible with detected harness are dimmed, not selectable, tagged like [claude-code only]",
+        "Space toggles selection (highlighted with checkmark)",
+        "Enter triggers installation for all checked items",
+        "If target install path already exists on disk, modal prompts Overwrite / Skip / Rename (default Skip when non-interactive)",
+        "Skill install: download tarball via US-008, extract to <harness_folder>/<skill_name>/, update .instinctagents",
+        "agents.md install delegates to US-011 logic",
+        "List refreshes to show [installed] markers after install",
+        "Errors shown inline as toast/footer message without crashing TUI",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Manual verification in terminal"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Remove tab - list installed, multi-select, uninstall",
+      "description": "As a user, I want a separate Remove tab that only shows what's currently installed in this project so I can uninstall items without distraction.",
+      "acceptanceCriteria": [
+        "Reads .instinctagents; shows only entries from installed_skills and installed_agents_md",
+        "Empty state shows 'Nothing installed in this project.'",
+        "Multi-select with Space; confirm with Enter",
+        "Skill removal deletes the skill folder under <harness_folder>/<skill_name>/ and removes entry from .instinctagents",
+        "agents.md removal deletes the delimited block (inclusive) from the harness instruction file and removes entry from .instinctagents",
+        "If matching delimiter pair is missing, log a warning and still remove from .instinctagents",
+        "Confirmation modal before destructive action: 'Remove N item(s)? [y/N]'",
+        "Unit tests cover successful removal, missing-delimiter case, partial-state edges",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Manual verification in terminal"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "List tab - show what's installed",
+      "description": "As a user, I want a read-only List tab showing everything installed in this project with versions.",
+      "acceptanceCriteria": [
+        "Two sections: 'Skills' and 'agents.md integrations'",
+        "Each entry shows: name, version, source_url, install_path",
+        "Empty state shows 'Nothing installed.'",
+        "Purely read-only (no editing)",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Manual verification in terminal"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Update tab - check binary for new version",
+      "description": "As a user, I want the Update tab to show whether the binary has a newer version available, with the GitHub release URL to re-download.",
+      "acceptanceCriteria": [
+        "On entering Update tab (and passively on launch), call GET https://api.github.com/repos/<owner>/<repo>/releases/latest",
+        "Cache result in .instinctagents fields last_update_check + latest_known_version; skip network call when cache <24h old",
+        "Compare latest version semver vs CARGO_PKG_VERSION",
+        "If newer: show 'A new version v<X.Y.Z> is available. Re-run the curl install command to update.' with release URL",
+        "If up-to-date: show 'You are on the latest version (vX.Y.Z).'",
+        "On binary launch (any tab) print one-line 'update available' notice at top if applicable",
+        "Never auto-replace the binary",
+        "Network errors silent (do not block tool); log to stderr only with --verbose",
+        "Unit tests cover: cache fresh (no network), cache stale (network called), API error (graceful fallback), version comparison cases",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "CLI argument parsing with clap",
+      "description": "As a user, I want a small set of CLI flags for non-interactive use and overrides.",
+      "acceptanceCriteria": [
+        "Uses clap v4 with derive macros",
+        "Flags: --version (print and exit), --help (print and exit), --force (override compatibility checks), --non-interactive (skip TUI), --verbose (debug logging to stderr)",
+        "Bare `instinctagents` launches TUI on Add tab",
+        "`instinctagents --non-interactive add --name <name> [--type skill|agents-md]` works without TUI",
+        "`instinctagents --non-interactive remove --name <name> [--type skill|agents-md]` works without TUI",
+        "--type is required only when a skill and agents.md integration share the same name",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "Tests pass"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Single-command curl install script",
+      "description": "As a user, I want to install the binary with one curl command, no package manager needed.",
+      "acceptanceCriteria": [
+        "install.sh at repo root",
+        "Curl invocation works: curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/install.sh | bash",
+        "Script downloads latest release asset for Linux x86_64 via GitHub Releases API",
+        "Default install location: ./instinctagents in current directory (no system-wide install)",
+        "Marks binary executable (chmod +x)",
+        "Prints next-step hint: 'Run ./instinctagents to start.'",
+        "Script fails clearly if not on Linux x86_64",
+        "shellcheck install.sh is clean",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Integration tests - install/remove for all three harnesses",
+      "description": "As a developer, I need end-to-end integration tests covering install and remove for both skills and agents.md across all three harnesses.",
+      "acceptanceCriteria": [
+        "Test: install skill into fake Claude Code project - .claude/skills/<name>/SKILL.md exists; .instinctagents updated",
+        "Test: install skill into fake Codex project - .codex/skills/<name>/SKILL.md exists",
+        "Test: install skill into fake OpenCode project - .opencode/skills/<name>/SKILL.md exists",
+        "Test: install agents.md into fake Claude Code project - CLAUDE.md contains delimiter block; pre-existing user content preserved byte-for-byte",
+        "Test: install agents.md into fake Codex project - same assertions on AGENTS.md",
+        "Test: install agents.md into fake OpenCode project - same assertions on AGENTS.md",
+        "Test: remove skill - folder deleted and .instinctagents updated",
+        "Test: remove agents.md - only delimited block removed, user content preserved",
+        "Test: install incompatible skill with --force succeeds; without --force is blocked",
+        "Test: install when folder exists with --force=skip skips; with --force=overwrite overwrites",
+        "All tests use US-007 helpers; no real network calls",
+        "Typecheck passes (cargo clippy -- -D warnings)",
+        "cargo test runs all tests green"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Internal tool Python source skeleton",
+      "description": "As a maintainer, I want a clear src/internal/ layout for the scripts that back the slash commands.",
+      "acceptanceCriteria": [
+        "src/internal/ contains scripts: skill_add.py, skill_remove.py, skill_list.py, agents_md_add.py, agents_md_remove.py, agents_md_list.py, plus shared lib.py",
+        "requirements.txt pins minimum deps (pyyaml) - keep tiny",
+        "src/internal/README.md documents how each script is invoked and what args it accepts",
+        "All scripts use argparse, support --help, return nonzero on failure",
+        "Typecheck passes (python -m py_compile src/internal/*.py)"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "skill-add script - ingest a skill from a URL",
+      "description": "As a maintainer, I want a script that accepts a GitHub URL (repo, folder, or single file), downloads the contents, and adds them to skills/ in this registry repo.",
+      "acceptanceCriteria": [
+        "Input: one positional URL argument",
+        "Repo root URL detection: fetch top-level tree via GitHub API; if single skill folder found (folder with SKILL.md or manifest.yml) import it; if multiple, prompt user to pick one",
+        "Folder URL detection (https://github.com/<owner>/<repo>/tree/<ref>/<path>): import as single skill",
+        "Raw file URL detection (blob URL or raw.githubusercontent.com): download single file, prompt: skill / agents.md / both",
+        "Imported skill goes to skills/<name>/ (name from source folder or sanitized filename)",
+        "If manifest.yml missing in source, scaffold one (prompt for description and version)",
+        "Update mapping.yml with new entry (name, version, source_url, install_path)",
+        "Refuse to overwrite existing entry without --force",
+        "Print confirmation summary of files added",
+        "Typecheck passes (python -m py_compile)"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "skill-remove script",
+      "description": "As a maintainer, I want a script to remove a skill from the registry by name.",
+      "acceptanceCriteria": [
+        "Input: --name <skill_name>",
+        "Resolves to skills/<name>/ and deletes the folder",
+        "Removes entry from mapping.yml",
+        "Errors clearly if name not in mapping.yml",
+        "--dry-run flag previews what would be deleted",
+        "Typecheck passes (python -m py_compile)"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "skill-list script",
+      "description": "As a maintainer, I want a script that prints all skills currently in the registry.",
+      "acceptanceCriteria": [
+        "Reads mapping.yml and prints tabular list (name, version, source_url)",
+        "--json flag prints machine-readable JSON",
+        "Typecheck passes (python -m py_compile)"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "agents-md-add script",
+      "description": "As a maintainer, I want a script that adds a new agents.md integration to the registry from a URL.",
+      "acceptanceCriteria": [
+        "Input: one positional URL (single-file raw URL preferred; repo-folder URL with snippet.md + manifest.yml also supported)",
+        "Imported integration goes to agents.md/<name>/snippet.md and agents.md/<name>/manifest.yml",
+        "If manifest.yml missing in source, scaffold (prompt for name, description, version, harness_compatibility)",
+        "Update mapping.yml installed_agents_md section",
+        "Refuses overwrite without --force",
+        "Typecheck passes (python -m py_compile)"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "agents-md-remove and agents-md-list scripts",
+      "description": "As a maintainer, I want the remove and list scripts for agents.md integrations.",
+      "acceptanceCriteria": [
+        "agents_md_remove.py mirrors skill-remove but targets agents.md/<name>/",
+        "agents_md_list.py mirrors skill-list but reads installed_agents_md",
+        "Both update mapping.yml",
+        "Typecheck passes (python -m py_compile)"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Claude Code slash command files",
+      "description": "As a maintainer running Claude Code in the registry repo, I want native slash commands for all six operations.",
+      "acceptanceCriteria": [
+        "Six files exist: .claude/commands/skill-add.md, skill-remove.md, skill-list.md, agents-md-add.md, agents-md-remove.md, agents-md-list.md",
+        "Each command's body instructs Claude to invoke the corresponding Python script in src/internal/ with user-provided arguments",
+        "Each command's YAML frontmatter sets a description matching the script's purpose",
+        "Manual verification: /skill-add <url> in Claude Code runs python src/internal/skill_add.py <url> and reports the result",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Codex skill equivalents",
+      "description": "As a maintainer running Codex in the registry repo, I want the same commands available as Codex skills (custom prompts are deprecated).",
+      "acceptanceCriteria": [
+        "Six skill folders exist under .codex/skills/ (skill-add, skill-remove, skill-list, agents-md-add, agents-md-remove, agents-md-list), each with SKILL.md",
+        "Each SKILL.md has correct YAML frontmatter (name, description) per Codex skill conventions",
+        "Skill body instructs the agent to call the matching Python script in src/internal/ with arguments",
+        "Manual verification: from a Codex session in registry repo, asking to 'run skill-add with URL <url>' triggers the script",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "OpenCode command files",
+      "description": "As a maintainer running OpenCode in the registry repo, I want native OpenCode commands.",
+      "acceptanceCriteria": [
+        "Six files exist under .opencode/commands/: skill-add.md, skill-remove.md, skill-list.md, agents-md-add.md, agents-md-remove.md, agents-md-list.md",
+        "Each file body invokes the Python script using OpenCode's RUN directive (verify exact syntax against OpenCode docs at implementation time)",
+        "Manual verification: /skill-add <url> in OpenCode runs the script",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "GitHub Actions CI workflow - build and test on PR",
+      "description": "As a maintainer, I want every PR to trigger a build + test run.",
+      "acceptanceCriteria": [
+        ".github/workflows/ci.yml exists; triggers on pull_request and push to main",
+        "Job runs on ubuntu-latest",
+        "Steps: checkout, install Rust stable, cache cargo, cargo fmt --check, cargo clippy -- -D warnings, cargo test",
+        "Optional Python lint step (python -m py_compile over all src/internal/*.py)",
+        "CI fails on any non-zero exit",
+        "Workflow runs green on a sample PR"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Release asset packaging script",
+      "description": "As a developer, I need a reproducible step in the release workflow that packages each skill and agents.md integration into a tarball.",
+      "acceptanceCriteria": [
+        "scripts/package-release-assets.sh walks skills/ and agents.md/, reads each manifest.yml for version",
+        "Emits dist/skill-<name>-<version>.tar.gz and dist/agents-md-<name>-<version>.tar.gz",
+        "Tarball contents: entire folder rooted at the skill/integration name (extracting skill-foo-1.0.0.tar.gz produces foo/ directory)",
+        "Script deterministic: tar --sort=name --owner=0 --group=0 --numeric-owner --mtime='1970-01-01'",
+        "Shell test runs the script against the repo and asserts expected tarballs are produced for example entries from US-001",
+        "shellcheck is clean",
+        "Typecheck passes"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "GitHub Actions release workflow - build and publish binary",
+      "description": "As a maintainer, I want pushing a v* git tag to build the Linux x86_64 binary and attach it to a GitHub release.",
+      "acceptanceCriteria": [
+        ".github/workflows/release.yml triggers on tags matching v*.*.*",
+        "Job runs on ubuntu-latest with target x86_64-unknown-linux-gnu",
+        "Steps: checkout, install Rust stable + target, cargo build --release --target x86_64-unknown-linux-gnu, strip binary, rename to instinctagents-linux-x86_64",
+        "Runs scripts/package-release-assets.sh (from US-029) before release step",
+        "Creates GitHub Release for the tag using softprops/action-gh-release or equivalent",
+        "Attaches instinctagents-linux-x86_64 and all tarballs from dist/ as release assets",
+        "Release notes auto-generated from commits since previous tag",
+        "Manual verification: tag v0.1.0, observe release created with all assets attached"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
