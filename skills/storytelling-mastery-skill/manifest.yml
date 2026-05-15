@@ -1,0 +1,18 @@
+name: storytelling-mastery-skill
+description: "Master-level storytelling skill distilled from 6 of the greatest storytelling\
+  \ minds in history: Aristotle (Poetics \u2014 the original theory of story), Joseph\
+  \ Campbell (The Hero's Journey / monomyth), Robert McKee (STORY seminar \u2014 Hollywood's\
+  \ guru of gurus), Kurt Vonnegut (shapes of stories, 8 rules of fiction), Donald\
+  \ Miller (StoryBrand \u2014 the business storytelling framework), and Pixar/Emma\
+  \ Coats (22 rules, the Story Spine). Distilled into 7 KEY PILLARS shared across\
+  \ all 6 masters \u2014 covering character, disruption, conflict, structure, transformation,\
+  \ emotional truth, and the craft of showing vs. telling. Use this skill whenever\
+  \ the user asks for help with any form of storytelling: brand stories, personal\
+  \ narratives, business presentations, content marketing, scripts, speeches, case\
+  \ studies, creative writing, TED-style talks, social media stories, or ANY communication\
+  \ that needs to move an audience. Trigger even when the user says \"help me make\
+  \ this more compelling,\" \"how do I structure this,\" \"make this story land,\"\
+  \ or \"I don't know how to tell this.\""
+version: 0.1.0
+harness_compatibility: []
+entrypoint: SKILL.md

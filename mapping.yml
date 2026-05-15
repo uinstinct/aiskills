@@ -1,7 +1,6 @@
-# instinctagents registry catalog
-# Lists every skill and agents.md integration currently published in this registry.
-# See docs/mapping-schema.md for the schema.
-
-installed_skills: []
-
+installed_skills:
+- name: storytelling-mastery-skill
+  version: 0.1.0
+  source_url: https://github.com/Zzzeen2552/storytelling-mastery-skill
+  install_path: skills/storytelling-mastery-skill/
 installed_agents_md: []
