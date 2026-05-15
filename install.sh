@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# instinctagents installer — downloads the latest Linux x86_64 release binary
-# into the current directory as ./instinctagents.
+# instinctagents installer — downloads the latest release binary for the
+# detected OS and architecture into the current directory as ./instinctagents.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/uinstinct/aiskills/main/install.sh | bash
@@ -8,7 +8,6 @@
 set -euo pipefail
 
 REPO="${INSTINCTAGENTS_REPO:-uinstinct/aiskills}"
-ASSET="instinctagents-linux-x86_64"
 DEST="./instinctagents"
 
 err() {
@@ -25,15 +24,18 @@ check_platform() {
     os="$(uname -s 2>/dev/null || echo unknown)"
     arch="$(uname -m 2>/dev/null || echo unknown)"
 
-    if [ "$os" != "Linux" ]; then
-        err "unsupported OS: $os (instinctagents currently ships only a Linux x86_64 binary)"
-    fi
-
-    case "$arch" in
-        x86_64|amd64)
+    case "${os}/${arch}" in
+        Linux/x86_64|Linux/amd64)
+            printf '%s' "instinctagents-linux-x86_64"
+            ;;
+        Darwin/arm64|Darwin/aarch64)
+            printf '%s' "instinctagents-macos-arm64"
+            ;;
+        Darwin/x86_64|Darwin/amd64)
+            printf '%s' "instinctagents-macos-x86_64"
             ;;
         *)
-            err "unsupported architecture: $arch (instinctagents currently ships only a Linux x86_64 binary)"
+            err "unsupported platform: os=${os} arch=${arch}"
             ;;
     esac
 }
@@ -49,9 +51,9 @@ latest_tag() {
 }
 
 download_asset() {
-    local tag="$1"
-    local url="https://github.com/${REPO}/releases/download/${tag}/${ASSET}"
-    printf 'Downloading %s from %s\n' "$ASSET" "$url"
+    local tag="$1" asset="$2"
+    local url="https://github.com/${REPO}/releases/download/${tag}/${asset}"
+    printf 'Downloading %s from %s\n' "$asset" "$url"
     curl -fL --progress-bar -o "$DEST" "$url" \
         || err "failed to download $url"
 }
@@ -59,13 +61,14 @@ download_asset() {
 main() {
     require_cmd curl
     require_cmd uname
-    check_platform
 
-    local tag
+    local asset tag
+    asset="$(check_platform)"
+
     tag="$(latest_tag)"
     printf 'Latest release: %s\n' "$tag"
 
-    download_asset "$tag"
+    download_asset "$tag" "$asset"
     chmod +x "$DEST"
 
     printf 'Installed %s (%s).\n' "$DEST" "$tag"
