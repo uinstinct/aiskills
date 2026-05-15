@@ -430,6 +430,37 @@ def write_manifest(dest_dir: Path, manifest: dict[str, Any]) -> Path:
     return path
 
 
+_FRONTMATTER_RE = re.compile(
+    r"\A---\s*\n(?P<body>.*?)\n---\s*(?:\n|\Z)", re.DOTALL
+)
+
+
+def parse_markdown_frontmatter(path: Path) -> dict[str, Any]:
+    """Return the YAML frontmatter mapping from a markdown file, or ``{}``.
+
+    SKILL.md and many agents.md ``snippet.md`` files lead with a YAML
+    frontmatter block (``---\\n...\\n---``) that already carries ``name``
+    and ``description``. Surfacing that lets the scaffolder skip prompts
+    in headless contexts (slash commands, CI) where there is no TTY.
+
+    Returns ``{}`` if the file is missing, has no frontmatter, or the
+    frontmatter doesn't parse as a YAML mapping — callers should treat
+    that as "no hint available" and fall back to their normal flow.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        return {}
+    try:
+        data = yaml.safe_load(match.group("body"))
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def scaffold_skill_manifest(
     dest_dir: Path,
     name: str,
@@ -451,10 +482,27 @@ def scaffold_skill_manifest(
         if not isinstance(existing, dict):
             raise IngestError(f"{target} is not a YAML mapping")
         return existing, False
-    description = description or prompt_text(f"Description for skill '{name}'")
-    version = version or prompt_text(
-        f"Version for skill '{name}'", default="0.1.0"
-    )
+    # Many SKILL.md files carry name+description in YAML frontmatter —
+    # prefer that over prompting so headless ingests (slash commands,
+    # CI) work without a TTY.
+    fm = parse_markdown_frontmatter(dest_dir / "SKILL.md")
+    fm_description = fm.get("description") if isinstance(fm.get("description"), str) else None
+    fm_version = fm.get("version") if isinstance(fm.get("version"), str) else None
+    if description is None:
+        if fm_description:
+            description = fm_description
+        elif sys.stdin.isatty():
+            description = prompt_text(f"Description for skill '{name}'")
+        else:
+            raise IngestError(
+                f"no description available for skill '{name}': "
+                f"SKILL.md has no YAML frontmatter 'description' field "
+                f"and no TTY is attached to prompt. Add a frontmatter "
+                f"block to the source file or run the command "
+                f"interactively."
+            )
+    if version is None:
+        version = fm_version or "0.1.0"
     manifest = {
         "name": name,
         "description": description,
@@ -485,20 +533,42 @@ def scaffold_agents_md_manifest(
         if not isinstance(existing, dict):
             raise IngestError(f"{target} is not a YAML mapping")
         return existing, False
-    description = description or prompt_text(
-        f"Description for agents.md integration '{name}'"
-    )
-    version = version or prompt_text(
-        f"Version for agents.md integration '{name}'", default="0.1.0"
-    )
+    # Many SKILL.md / snippet.md files carry name+description in YAML
+    # frontmatter — prefer that over prompting so headless ingests
+    # (slash commands, CI) work without a TTY.
+    fm = parse_markdown_frontmatter(dest_dir / "snippet.md")
+    fm_description = fm.get("description") if isinstance(fm.get("description"), str) else None
+    fm_version = fm.get("version") if isinstance(fm.get("version"), str) else None
+    if description is None:
+        if fm_description:
+            description = fm_description
+        elif sys.stdin.isatty():
+            description = prompt_text(
+                f"Description for agents.md integration '{name}'"
+            )
+        else:
+            raise IngestError(
+                f"no description available for agents.md integration "
+                f"'{name}': snippet.md has no YAML frontmatter "
+                f"'description' field and no TTY is attached to prompt. "
+                f"Add a frontmatter block to the source file or run the "
+                f"command interactively."
+            )
+    if version is None:
+        version = fm_version or "0.1.0"
     if harness_compatibility is None:
-        raw = prompt_text(
-            f"harness_compatibility for '{name}' "
-            "(comma-separated subset of claude-code/codex/opencode; "
-            "blank = all)",
-            default="",
-        )
-        harness_compatibility = [t.strip() for t in raw.split(",") if t.strip()]
+        if sys.stdin.isatty():
+            raw = prompt_text(
+                f"harness_compatibility for '{name}' "
+                "(comma-separated subset of claude-code/codex/opencode; "
+                "blank = all)",
+                default="",
+            )
+            harness_compatibility = [t.strip() for t in raw.split(",") if t.strip()]
+        else:
+            # Empty list means "compatible with all harnesses" — safe default
+            # when we can't ask.
+            harness_compatibility = []
     for tag in harness_compatibility:
         if tag not in ALLOWED_HARNESSES:
             raise IngestError(

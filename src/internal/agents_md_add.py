@@ -5,7 +5,9 @@ Accepts one of three URL shapes:
 
 * **Raw file** ``https://github.com/<owner>/<repo>/blob/<ref>/<path>``
   or ``https://raw.githubusercontent.com/...`` — downloads the file as
-  ``snippet.md`` (preferred input per AC).
+  ``snippet.md`` (preferred input per AC). When the file is a
+  ``SKILL.md`` the entry name is taken from its parent folder (the
+  skill directory) rather than from the literal filename.
 * **Folder** ``https://github.com/<owner>/<repo>/tree/<ref>/<path>`` —
   imports the subtree (expected to contain ``snippet.md`` and
   optionally ``manifest.yml``).
@@ -169,7 +171,16 @@ def _ingest_from_single_file(
     filename = parsed.path.rsplit("/", 1)[-1]
     if not filename:
         raise IngestError(f"raw URL points to a directory, not a file: {source_url}")
-    name = sanitize_name(filename.rsplit(".", 1)[0] if "." in filename else filename)
+    if filename.lower() == "skill.md":
+        # SKILL.md is a marker filename — every skill has one, so deriving
+        # the name from it would collapse every ingest onto "skill". Use the
+        # parent folder (the skill directory) instead, or the repo name when
+        # SKILL.md sits at the repo root.
+        parent = parsed.path.rsplit("/", 1)[0] if "/" in parsed.path else ""
+        name_hint = parent.rsplit("/", 1)[-1] if parent else parsed.repo
+    else:
+        name_hint = filename.rsplit(".", 1)[0] if "." in filename else filename
+    name = sanitize_name(name_hint)
     body = fetch_raw_file(parsed.owner, parsed.repo, parsed.ref, parsed.path)
     _install_single_file(name, body, source_url, force)
     return 0
