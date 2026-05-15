@@ -52,5 +52,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: shellcheck install.sh
-        run: shellcheck install.sh
+      - name: shellcheck
+        run: shellcheck install.sh scripts/package-release-assets.sh scripts/test-package-release-assets.sh
+
+      - name: package-release-assets smoke test
+        run: ./scripts/test-package-release-assets.sh
