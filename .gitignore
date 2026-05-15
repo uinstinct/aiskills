@@ -20,3 +20,9 @@ __pycache__/
 
 # Local state files written by the CLI inside test projects
 .instinctagents
+
+# the compiled binary file
+instinctagents
+
+# claude project specific installations
+!.claude/settings.local.json
