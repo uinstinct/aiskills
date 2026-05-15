@@ -1,6 +1,6 @@
 # instinctagents
 
-A two-part Skill & `agents.md` registry:
+A personal two-part Skill & `agents.md` registry:
 
 - A single-binary **Rust CLI with TUI** (`instinctagents`) for installing/removing cataloged skills and `agents.md` snippets in any project.
 - An **agentic internal tool** for maintainers that ingests entries from GitHub URLs into this registry repo.
@@ -14,6 +14,13 @@ curl -fsSL https://raw.githubusercontent.com/uinstinct/aiskills/main/install.sh 
 ```
 
 This downloads the latest release binary into the current directory as `./instinctagents`.
+
+**Supported platforms:** macOS arm64 (Apple Silicon), macOS x86_64 (Intel), Linux x86_64.
+
+> **macOS users:** The binary is unsigned, so Gatekeeper may block it on first run. To allow it, either right-click the binary and choose **Open**, or run:
+> ```sh
+> xattr -d com.apple.quarantine ./instinctagents
+> ```
 
 ## Usage
 
