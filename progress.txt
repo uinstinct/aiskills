@@ -2,6 +2,15 @@
 - Workspace Cargo.toml at root includes `src/external`; `cargo build` runs from root and outputs to `target/` at root level (not `src/external/target/`)
 - Release workflow uses separate build jobs that upload artifacts, then a final `release` job downloads and publishes
 
+## 2026-05-15 - US-002
+- What was implemented: Added `build-macos-x86_64` job to `.github/workflows/release.yml` that cross-compiles for `x86_64-apple-darwin` on the `macos-14` (Apple Silicon) runner. Added `dist/instinctagents-macos-x86_64` to the release `files:` list. Updated `release` job `needs` to include all three build jobs.
+- Files changed: `.github/workflows/release.yml`
+- **Learnings for future iterations:**
+  - Rust cross-compilation from arm64 macOS to x86_64 macOS is supported natively; no extra toolchain beyond `rustup target add x86_64-apple-darwin` is needed
+  - `strip` on macOS works on cross-compiled x86_64 binaries while running on arm64 — no cross-strip needed
+  - Documented approach choice (cross-compile vs separate runner) via YAML comment as required by the PRD
+---
+
 ## 2026-05-15 - US-001
 - What was implemented: Split the single `release` job into `build-linux-x86_64`, `build-macos-arm64`, and `release` jobs. The macOS arm64 job runs on `macos-14`, installs Rust with `aarch64-apple-darwin` target, builds, strips, and uploads artifact. The final `release` job downloads all artifacts and publishes via softprops/action-gh-release.
 - Files changed: `.github/workflows/release.yml`
