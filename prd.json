@@ -306,8 +306,8 @@
         "Typecheck passes"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "install.sh at repo root: `#!/usr/bin/env bash` with `set -euo pipefail`. Queries https://api.github.com/repos/${REPO}/releases/latest (REPO defaults to `uinstinct/aiskills`, overridable via `INSTINCTAGENTS_REPO` env for testing/forks), parses `tag_name` via sed (no jq dependency), then downloads https://github.com/${REPO}/releases/download/<tag>/instinctagents-linux-x86_64 into `./instinctagents` and `chmod +x`s it. Pre-flight: `uname -s` must equal `Linux` AND `uname -m` must be `x86_64`/`amd64`, otherwise prints `error: unsupported OS/architecture ...` to stderr and exits 1. Requires `curl` + `uname` on PATH (errors clearly if missing). Prints `Run ./instinctagents to start.` on success. `shellcheck install.sh` clean (0.10.0). `cargo check --all-targets` clean (no Rust changes)."
     },
     {
       "id": "US-018",
