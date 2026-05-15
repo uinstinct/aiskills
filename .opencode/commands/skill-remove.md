@@ -4,7 +4,7 @@ description: Remove a skill from the registry by name
 
 Run the skill-remove script with the user-provided arguments.
 
-!`python src/internal/skill_remove.py $ARGUMENTS`
+!`uv run --project src/internal python src/internal/skill_remove.py $ARGUMENTS`
 
 Arguments:
 

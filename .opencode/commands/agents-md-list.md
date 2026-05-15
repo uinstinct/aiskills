@@ -4,7 +4,7 @@ description: List all agents.md integrations currently in the registry
 
 Run the agents-md-list script with the user-provided arguments.
 
-!`python src/internal/agents_md_list.py $ARGUMENTS`
+!`uv run --project src/internal python src/internal/agents_md_list.py $ARGUMENTS`
 
 Arguments (all optional):
 

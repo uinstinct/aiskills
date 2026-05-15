@@ -4,7 +4,7 @@ description: Remove an agents.md integration from the registry by name
 
 Run the agents-md-remove script with the user-provided arguments.
 
-!`python src/internal/agents_md_remove.py $ARGUMENTS`
+!`uv run --project src/internal python src/internal/agents_md_remove.py $ARGUMENTS`
 
 Arguments:
 

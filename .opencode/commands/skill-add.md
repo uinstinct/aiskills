@@ -4,7 +4,7 @@ description: Ingest a skill from a GitHub URL into this registry
 
 Run the skill-add script with the user-provided arguments.
 
-!`python src/internal/skill_add.py $ARGUMENTS`
+!`uv run --project src/internal python src/internal/skill_add.py $ARGUMENTS`
 
 Arguments:
 

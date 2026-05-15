@@ -4,7 +4,7 @@ description: Ingest an agents.md integration from a GitHub URL into this registr
 
 Run the agents-md-add script with the user-provided arguments.
 
-!`python src/internal/agents_md_add.py $ARGUMENTS`
+!`uv run --project src/internal python src/internal/agents_md_add.py $ARGUMENTS`
 
 Arguments:
 
