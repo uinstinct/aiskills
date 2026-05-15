@@ -1,3 +1,11 @@
+## 2026-05-15 - US-012
+- What was implemented: Added uv prerequisite paragraph to README.md `## For maintainers` section with link to https://docs.astral.sh/uv/getting-started/installation/. Updated `src/internal/README.md` Typecheck section to reflect uv-based CI (replaced outdated `python -m py_compile` instructions with `uv sync --frozen` + `uv run` smoke test). No `pip`, `requirements.txt`, or `python -m venv` references remain in either README.
+- Files changed: `README.md`, `src/internal/README.md`
+- **Learnings for future iterations:**
+  - The old Typecheck section in src/internal/README.md still referenced `python -m py_compile` / "CI (US-028)" — kept from before the uv migration; always check for stale CI documentation when updating CI
+  - Avoid mentioning `pip` even in negations ("no pip needed") in README to stay consistent with acceptance criteria
+---
+
 ## 2026-05-15 - US-011
 - What was implemented: Updated `.github/workflows/ci.yml` python job to replace `actions/setup-python@v5` + `python -m py_compile` with `astral-sh/setup-uv@v3`, `uv sync --frozen --project src/internal`, and a smoke test via `uv run --project src/internal python src/internal/skill_list.py`. No pip references remain in ci.yml.
 - Files changed: `.github/workflows/ci.yml`
