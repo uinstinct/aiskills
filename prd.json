@@ -438,8 +438,8 @@
         "Typecheck passes"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Six command files landed under .claude/commands/ — skill-add.md, skill-remove.md, skill-list.md, agents-md-add.md, agents-md-remove.md, agents-md-list.md. Each carries YAML frontmatter `description:` (matching the script's purpose) + `allowed-tools: Bash, Read` (Bash to invoke the script, Read so Claude can show inline help / inspect mapping.yml after). Each body instructs Claude to invoke `python src/internal/<script>.py $ARGUMENTS` and documents the argument shape (positional URL for add, --name for remove, --json for list, --force / --dry-run optionals where applicable). The `$ARGUMENTS` placeholder is the Claude Code convention for forwarding user-typed args verbatim to the shell invocation, so `/skill-add <url>` becomes `python src/internal/skill_add.py <url>`. Bodies also tell Claude to surface the script's stdout summary on success and the stderr error verbatim on non-zero exit, matching the lib.fail() one-line `error: ...` contract from US-019. `python -m py_compile src/internal/*.py` clean (no Python changes; quality gate confirmed). Manual verification deferred per Claude Code slash-command convention — frontmatter + body shape mirror the cached plugin commands at ~/.claude/plugins/cache/claude-hud/.../commands/*.md so the loader will pick them up unchanged."
     },
     {
       "id": "US-026",
