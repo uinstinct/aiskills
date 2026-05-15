@@ -1,3 +1,12 @@
+## 2026-05-15 - US-003
+- What was implemented: Updated install.sh to auto-detect OS and architecture. Removed top-level `ASSET` constant; `check_platform` now computes the asset name via a `case "${os}/${arch}"` statement and prints it for capture. Added Darwin/arm64, Darwin/aarch64, Darwin/x86_64, Darwin/amd64 cases. Updated `download_asset` to accept `asset` as a second parameter. Error messages now include both OS and arch values.
+- Files changed: `install.sh`
+- **Learnings for future iterations:**
+  - `case "${os}/${arch}"` pattern is clean for combined OS+arch dispatch in bash
+  - Separate `local asset tag` declaration from assignment (e.g., `asset="$(check_platform)"`) avoids SC2155 shellcheck warning about masking return values
+  - Error message format `error: unsupported platform: os=${os} arch=${arch}` satisfies the requirement that stderr contains `error:` plus both detected values (needed by US-004 tests)
+---
+
 ## Codebase Patterns
 - Workspace Cargo.toml at root includes `src/external`; `cargo build` runs from root and outputs to `target/` at root level (not `src/external/target/`)
 - Release workflow uses separate build jobs that upload artifacts, then a final `release` job downloads and publishes
