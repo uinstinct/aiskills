@@ -10,6 +10,9 @@
 //!   multi-select with Space, Enter opens a "Remove N item(s)? [y/N]"
 //!   confirmation modal, y/Y runs the batch uninstall via
 //!   [`installer::remove_skill`] / [`installer::remove_agents_md`].
+//! - US-014 fills in the List tab: read-only view of `.instinctagents`,
+//!   two sections (Skills + agents.md), each row shows name, version,
+//!   source_url, install_path.
 
 use std::io::{self, IsTerminal, Stdout};
 use std::path::PathBuf;
@@ -287,6 +290,49 @@ impl RemoveTabState {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ListRow {
+    pub(crate) kind: RowKind,
+    pub(crate) name: String,
+    pub(crate) version: String,
+    pub(crate) source_url: String,
+    pub(crate) install_path: String,
+}
+
+/// Pure: build List-tab rows from the project's installed-items state.
+/// Skills first, then agents.md integrations. For agents.md rows the
+/// `install_path` is rendered as the harness instruction file plus the
+/// delimiter id (when `harness` is known); for skills it's the on-disk
+/// folder path stored in state.
+pub(crate) fn build_list_rows(state: &ProjectState, harness: Option<Harness>) -> Vec<ListRow> {
+    let mut out =
+        Vec::with_capacity(state.installed_skills.len() + state.installed_agents_md.len());
+    for s in &state.installed_skills {
+        out.push(ListRow {
+            kind: RowKind::Skill,
+            name: s.name.clone(),
+            version: s.version.clone(),
+            source_url: s.source_url.clone(),
+            install_path: s.install_path.clone().unwrap_or_default(),
+        });
+    }
+    for a in &state.installed_agents_md {
+        let delim = a.delimiter_id.clone().unwrap_or_else(|| a.name.clone());
+        let path = match harness {
+            Some(h) => format!("{} (block: {})", h.agents_md_file(), delim),
+            None => format!("(block: {})", delim),
+        };
+        out.push(ListRow {
+            kind: RowKind::AgentsMd,
+            name: a.name.clone(),
+            version: a.version.clone(),
+            source_url: a.source_url.clone(),
+            install_path: path,
+        });
+    }
+    out
+}
+
 /// Pure: build Remove-tab rows from the project's installed-items state.
 /// Skills are listed first, then agents.md integrations.
 pub(crate) fn build_remove_rows(state: &ProjectState) -> Vec<RemoveRow> {
@@ -316,6 +362,7 @@ pub struct App {
     should_quit: bool,
     add: AddTabState,
     remove: RemoveTabState,
+    list: Vec<ListRow>,
 }
 
 impl App {
@@ -323,6 +370,7 @@ impl App {
         let state = ProjectState::load(&project_root).unwrap_or_default();
         let add_rows = build_add_rows(catalog::SKILLS, catalog::AGENTS_MD, &state, harness);
         let remove_rows = build_remove_rows(&state);
+        let list_rows = build_list_rows(&state, harness);
         Self {
             current_tab: Tab::Add,
             harness,
@@ -330,6 +378,7 @@ impl App {
             should_quit: false,
             add: AddTabState::new(add_rows),
             remove: RemoveTabState::new(remove_rows),
+            list: list_rows,
         }
     }
 
@@ -539,12 +588,14 @@ impl App {
         let state = ProjectState::load(&self.project_root).unwrap_or_default();
         let rows = build_add_rows(catalog::SKILLS, catalog::AGENTS_MD, &state, self.harness);
         self.add.refresh(rows);
+        self.list = build_list_rows(&state, self.harness);
     }
 
     fn refresh_remove_rows(&mut self) {
         let state = ProjectState::load(&self.project_root).unwrap_or_default();
         let rows = build_remove_rows(&state);
         self.remove.refresh(rows);
+        self.list = build_list_rows(&state, self.harness);
     }
 
     fn trigger_remove(&mut self) {
@@ -768,7 +819,8 @@ fn render_body(f: &mut Frame, app: &App, area: Rect) {
     match app.current_tab {
         Tab::Add => render_add(f, app, area),
         Tab::Remove => render_remove(f, app, area),
-        Tab::List | Tab::Update => {
+        Tab::List => render_list(f, app, area),
+        Tab::Update => {
             let body_text = format!("{} tab (placeholder)", app.current_tab.title());
             let body = Paragraph::new(Span::raw(body_text)).block(
                 Block::default()
@@ -778,6 +830,55 @@ fn render_body(f: &mut Frame, app: &App, area: Rect) {
             f.render_widget(body, area);
         }
     }
+}
+
+fn render_list(f: &mut Frame, app: &App, area: Rect) {
+    let body_area = Block::default().borders(Borders::ALL).title("List");
+    let inner = body_area.inner(area);
+    f.render_widget(body_area, area);
+
+    if app.list.is_empty() {
+        let p =
+            Paragraph::new("Nothing installed.").style(Style::default().fg(Color::DarkGray));
+        f.render_widget(p, inner);
+        return;
+    }
+
+    let mut items: Vec<ListItem> = Vec::with_capacity(app.list.len() * 2 + 2);
+    let mut last_kind: Option<RowKind> = None;
+    for row in &app.list {
+        if last_kind != Some(row.kind) {
+            let header = match row.kind {
+                RowKind::Skill => "── Skills ──",
+                RowKind::AgentsMd => "── agents.md integrations ──",
+            };
+            items.push(ListItem::new(Span::styled(
+                header,
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            )));
+            last_kind = Some(row.kind);
+        }
+        let primary = Line::from(vec![
+            Span::styled(
+                row.name.clone(),
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("  v"),
+            Span::raw(row.version.clone()),
+        ]);
+        let detail = Line::from(Span::styled(
+            format!("    source: {}", row.source_url),
+            Style::default().fg(Color::DarkGray),
+        ));
+        let detail2 = Line::from(Span::styled(
+            format!("    path:   {}", row.install_path),
+            Style::default().fg(Color::DarkGray),
+        ));
+        items.push(ListItem::new(vec![primary, detail, detail2]));
+    }
+
+    let list = List::new(items);
+    f.render_widget(list, inner);
 }
 
 fn render_remove(f: &mut Frame, app: &App, area: Rect) {
@@ -1610,6 +1711,71 @@ mod tests {
             on_disk.installed_agents_md.is_empty(),
             "state pruned even when delimiter missing"
         );
+    }
+
+    // -- List tab tests -------------------------------------------------------
+
+    #[test]
+    fn build_list_rows_lists_skills_then_agents_md() {
+        let state = seed_state_with(&[("alpha", "0.1.0")], &[("beta", "0.2.0")]);
+        let rows = build_list_rows(&state, Some(Harness::ClaudeCode));
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].kind, RowKind::Skill);
+        assert_eq!(rows[0].name, "alpha");
+        assert_eq!(rows[0].version, "0.1.0");
+        assert_eq!(rows[0].source_url, "https://example.test");
+        assert_eq!(rows[0].install_path, ".claude/skills/alpha/");
+        assert_eq!(rows[1].kind, RowKind::AgentsMd);
+        assert_eq!(rows[1].name, "beta");
+        // agents.md install_path renders as harness file + block id.
+        assert!(rows[1].install_path.contains("CLAUDE.md"));
+        assert!(rows[1].install_path.contains("beta"));
+    }
+
+    #[test]
+    fn build_list_rows_empty_state_is_empty() {
+        let state = ProjectState::default();
+        let rows = build_list_rows(&state, Some(Harness::ClaudeCode));
+        assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn build_list_rows_agents_md_uses_harness_file_per_harness() {
+        let state = seed_state_with(&[], &[("x", "1.0.0")]);
+        let claude = build_list_rows(&state, Some(Harness::ClaudeCode));
+        assert!(claude[0].install_path.starts_with("CLAUDE.md"));
+        let codex = build_list_rows(&state, Some(Harness::Codex));
+        assert!(codex[0].install_path.starts_with("AGENTS.md"));
+        let opencode = build_list_rows(&state, Some(Harness::OpenCode));
+        assert!(opencode[0].install_path.starts_with("AGENTS.md"));
+        let none = build_list_rows(&state, None);
+        // No harness => skip the file prefix; keep the block id visible.
+        assert!(none[0].install_path.contains("(block: x)"));
+    }
+
+    #[test]
+    fn list_refreshes_after_removal() {
+        let dir = TempDir::new().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude/skills/foo")).unwrap();
+        let state = seed_state_with(&[("foo", "0.1.0")], &[]);
+        state.save(dir.path()).unwrap();
+
+        let mut app = App::new(dir.path().to_path_buf(), Some(Harness::ClaudeCode));
+        assert_eq!(app.list.len(), 1);
+
+        app.current_tab = Tab::Remove;
+        app.remove.toggle_selected();
+        app.trigger_remove();
+        app.handle_key(KeyCode::Char('y'), KeyModifiers::NONE);
+
+        assert!(app.list.is_empty(), "list refreshes after removal");
+    }
+
+    #[test]
+    fn list_tab_is_enabled_without_harness() {
+        // List is read-only; it must work even when no harness is detected.
+        let app = fresh_app(None);
+        assert!(!app.tab_disabled(Tab::List));
     }
 
     #[test]

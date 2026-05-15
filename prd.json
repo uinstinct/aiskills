@@ -248,8 +248,8 @@
         "Manual verification in terminal"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "List tab is now a read-only view of `.instinctagents`. New `ListRow { kind, name, version, source_url, install_path }` and pure `build_list_rows(state, harness) -> Vec<ListRow>` (skills first, then agents.md). For agents.md rows, `install_path` renders as `<harness.agents_md_file()> (block: <delimiter_id>)` so the user sees both the on-disk file AND the delimiter block name; for skills it's the stored on-disk folder path. `App` now caches a `list: Vec<ListRow>` populated in `App::new` and refreshed by both `refresh_add_rows` and `refresh_remove_rows`. `render_list(f, app, area)` draws two sections with cyan headers, each entry as three lines: bold `<name>  v<version>`, dim `    source: <url>`, dim `    path:   <install_path>`; empty state prints 'Nothing installed.'. Layout/footer untouched — List tab uses the default footer (`[Tab/Shift+Tab] switch  [1-4] jump  [q/Esc] quit`). List tab is enabled even when no harness is detected (it's read-only). Added 5 tui tests (skills-then-agents ordering, empty-state, harness file rendering per harness incl. None, refresh-after-removal, list-not-disabled-without-harness). cargo check / clippy --all-targets -- -D warnings / test (96 unit + 6 integration passed) / build --release all green. Manual TUI verification deferred — same TUI exception as US-010/US-012/US-013."
     },
     {
       "id": "US-015",
