@@ -1,3 +1,11 @@
+## 2026-05-15 - US-008
+- What was implemented: Updated all six `.claude/commands/*.md` files to replace `python src/internal/<script>.py $ARGUMENTS` with `uv run --project src/internal python src/internal/<script>.py $ARGUMENTS`. No frontmatter changes were needed. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output.
+- Files changed: `.claude/commands/skill-add.md`, `.claude/commands/skill-list.md`, `.claude/commands/skill-remove.md`, `.claude/commands/agents-md-add.md`, `.claude/commands/agents-md-list.md`, `.claude/commands/agents-md-remove.md`
+- **Learnings for future iterations:**
+  - `uv run --project src/internal` resolves the project from repo root without needing a prior `uv sync` step
+  - No `allowed-tools` changes needed — `Bash` was already listed and `uv run` is just a different invocation of the same bash command
+---
+
 ## 2026-05-15 - US-007
 - What was implemented: Added uv version note (≥ 0.8.19) to `src/internal/README.md` Setup section. The `uv.lock` file was already committed in the US-006 commit; US-007 verified: lockfile exists, `uv sync --frozen --project src/internal` passes, `.gitignore` does not exclude `uv.lock`, and README now documents the minimum uv version.
 - Files changed: `src/internal/README.md`
