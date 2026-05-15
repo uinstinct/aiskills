@@ -8,5 +8,8 @@ mod tui;
 mod update;
 
 fn main() {
-    println!("instinctagents v{}", env!("CARGO_PKG_VERSION"));
+    if let Err(e) = tui::run() {
+        eprintln!("instinctagents: {e}");
+        std::process::exit(1);
+    }
 }

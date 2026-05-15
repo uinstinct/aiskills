@@ -6,7 +6,6 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 
 use assert_cmd::Command;
-use predicates::str::contains;
 
 #[test]
 fn fake_claude_project_is_detected_and_binary_runs_inside_it() {
@@ -17,12 +16,16 @@ fn fake_claude_project_is_detected_and_binary_runs_inside_it() {
         "fake_claude_project() must seed CLAUDE.md"
     );
 
+    // Since US-010, `main` launches the TUI. In a non-TTY environment
+    // (assert_cmd pipes stdout) the TUI bails out immediately with exit 0
+    // — we still want to assert the binary runs cleanly inside the fake
+    // project without panicking on the harness-detection / cwd path.
     Command::cargo_bin("instinctagents")
         .expect("instinctagents binary exists")
         .current_dir(project.path())
+        .write_stdin("q")
         .assert()
-        .success()
-        .stdout(contains("instinctagents v"));
+        .success();
 }
 
 #[test]

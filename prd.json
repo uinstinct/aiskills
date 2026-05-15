@@ -171,8 +171,8 @@
         "Manual verification in terminal (TUI is exception to dev-browser rule)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "tui.rs now exposes `pub fn run() -> io::Result<()>` and a `Tab { Add, Remove, List, Update }` enum. `run()` detects the harness via `harness::detect(std::env::current_dir())`, sets up ratatui+crossterm (raw mode + alternate screen), and runs an event loop until `should_quit`. Layout: header (harness or 'No harness detected' in yellow), Tabs widget, body placeholder per tab, footer with keybindings. Keys: Tab/Shift+Tab cycle, 1-4 jump, q/Esc quit. Add and Remove tabs are dimmed and tagged disabled when harness is None. Non-TTY launches (e.g. assert_cmd pipes) short-circuit via std::io::IsTerminal and return Ok(()) immediately — this is what the integration test exercises. main.rs now wires `tui::run()`. Cargo.toml deps: `ratatui = \"0.29\"`, `crossterm = \"0.28\"`. Tests: 10 unit tests in tui::tests cover tab cycling/wrap, number keys, q/Esc/Tab/BackTab, harness gating, unrelated-key no-ops; 2 integration tests in tests/tui_exit.rs launch the binary with 'q' piped to stdin inside both a fake_claude_project() and a bare TempDir and assert exit code 0. The pre-existing helpers_smoke test was updated (it asserted the old version-print stdout, which is gone). cargo check/clippy --all-targets -D warnings/test (37 unit + 6 integration passed)/build --release all green. Manual TUI verification deferred per AC."
     },
     {
       "id": "US-011",
