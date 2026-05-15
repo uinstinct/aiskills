@@ -1,3 +1,11 @@
+## 2026-05-15 - US-010
+- What was implemented: Updated all six `.opencode/commands/*.md` files to replace `python src/internal/<script>.py $ARGUMENTS` with `uv run --project src/internal python src/internal/<script>.py $ARGUMENTS`. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output. No pip/venv references remain in any OpenCode command file.
+- Files changed: `.opencode/commands/skill-add.md`, `.opencode/commands/skill-list.md`, `.opencode/commands/skill-remove.md`, `.opencode/commands/agents-md-add.md`, `.opencode/commands/agents-md-list.md`, `.opencode/commands/agents-md-remove.md`
+- **Learnings for future iterations:**
+  - OpenCode commands use a single `.md` file per command under `.opencode/commands/`; the `!` shell invocation line is the only place to update
+  - Change is identical in pattern to US-008 and US-009 — just a different directory
+---
+
 ## 2026-05-15 - US-009
 - What was implemented: Updated all six `.codex/skills/*/SKILL.md` files to replace `python src/internal/<script>.py <ARGUMENTS>` with `uv run --project src/internal python src/internal/<script>.py <ARGUMENTS>`. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output. No pip/venv references remain in any Codex skill file.
 - Files changed: `.codex/skills/skill-add/SKILL.md`, `.codex/skills/skill-list/SKILL.md`, `.codex/skills/skill-remove/SKILL.md`, `.codex/skills/agents-md-add/SKILL.md`, `.codex/skills/agents-md-list/SKILL.md`, `.codex/skills/agents-md-remove/SKILL.md`
