@@ -1,4 +1,0 @@
-# Minimum deps for the instinctagents internal ingest scripts.
-# Keep this list tiny — every dep here is something maintainers running the
-# slash commands (US-025/026/027) have to install. Prefer stdlib otherwise.
-pyyaml>=6.0

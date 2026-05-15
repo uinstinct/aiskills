@@ -17,12 +17,16 @@ Every script:
 
 ## Setup
 
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then sync the project:
+
 ```sh
-python3 -m pip install -r src/internal/requirements.txt
+uv sync --project src/internal
 ```
 
 Only one runtime dep: `pyyaml`. Everything else is stdlib (`argparse`,
-`json`, `pathlib`, ...).
+`json`, `pathlib`, ...). You can also skip the sync step and use
+`uv run --project src/internal python src/internal/<script>.py` directly — uv
+will install dependencies on first run.
 
 ## Scripts
 
