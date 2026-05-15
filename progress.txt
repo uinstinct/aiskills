@@ -1,3 +1,11 @@
+## 2026-05-15 - US-007
+- What was implemented: Added uv version note (≥ 0.8.19) to `src/internal/README.md` Setup section. The `uv.lock` file was already committed in the US-006 commit; US-007 verified: lockfile exists, `uv sync --frozen --project src/internal` passes, `.gitignore` does not exclude `uv.lock`, and README now documents the minimum uv version.
+- Files changed: `src/internal/README.md`
+- **Learnings for future iterations:**
+  - `uv sync --frozen` fails if `uv.lock` is out of sync with `pyproject.toml`; running `uv sync` (without `--frozen`) regenerates it
+  - The uv version note goes in the Setup section of README, right before the `uv sync` command, not in a separate section
+---
+
 ## 2026-05-15 - US-006
 - What was implemented: Created `src/internal/pyproject.toml` with name `instinctagents-internal`, requires-python `>=3.10`, and dependency `pyyaml>=6.0`. Deleted `src/internal/requirements.txt`. Updated `src/internal/README.md` to replace `pip install -r` with `uv sync --project src/internal` (and note on `uv run` as an alternative). Also committed the auto-generated `uv.lock` as a byproduct of `uv sync`.
 - Files changed: `src/internal/pyproject.toml` (new), `src/internal/uv.lock` (new), `src/internal/requirements.txt` (deleted), `src/internal/README.md`
