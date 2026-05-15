@@ -214,6 +214,29 @@ pub fn is_compatible(entry: &CatalogEntry, harness: Harness) -> bool {
     entry.harness_compatibility.contains(&tag)
 }
 
+/// Gate the install path on harness compatibility. Returns `Ok(())` when
+/// the install should proceed (`force` bypasses) and
+/// [`CliError::Incompatible`] otherwise. Shared between the skill and
+/// agents.md branches of [`run_add`] so the AC "with --force succeeds;
+/// without --force is blocked" has a single chokepoint.
+pub fn check_compat(
+    entry: &CatalogEntry,
+    harness: Harness,
+    force: bool,
+) -> Result<(), CliError> {
+    if force || is_compatible(entry, harness) {
+        return Ok(());
+    }
+    Err(CliError::Incompatible {
+        name: entry.name.to_string(),
+        allowed: entry
+            .harness_compatibility
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect(),
+    })
+}
+
 /// Execute the non-interactive path. `project_root` is the working
 /// directory the binary was launched from.
 pub fn run_non_interactive(cli: &Cli, project_root: &Path) -> Result<CliOutcome, CliError> {
@@ -244,16 +267,7 @@ fn run_add(args: &ItemArgs, project_root: &Path, force: bool) -> Result<CliOutco
                     name: args.name.clone(),
                 })?;
 
-            if !force && !is_compatible(entry, harness) {
-                return Err(CliError::Incompatible {
-                    name: args.name.clone(),
-                    allowed: entry
-                        .harness_compatibility
-                        .iter()
-                        .map(|s| (*s).to_string())
-                        .collect(),
-                });
-            }
+            check_compat(entry, harness, force)?;
 
             let outcome = installer::fetch_and_install_skill(
                 project_root,
@@ -285,16 +299,7 @@ fn run_add(args: &ItemArgs, project_root: &Path, force: bool) -> Result<CliOutco
                     name: args.name.clone(),
                 })?;
 
-            if !force && !is_compatible(entry, harness) {
-                return Err(CliError::Incompatible {
-                    name: args.name.clone(),
-                    allowed: entry
-                        .harness_compatibility
-                        .iter()
-                        .map(|s| (*s).to_string())
-                        .collect(),
-                });
-            }
+            check_compat(entry, harness, force)?;
 
             installer::fetch_and_install_agents_md(
                 project_root,
@@ -545,6 +550,51 @@ mod tests {
         assert!(is_compatible(&entry, Harness::ClaudeCode));
         assert!(is_compatible(&entry, Harness::Codex));
         assert!(is_compatible(&entry, Harness::OpenCode));
+    }
+
+    #[test]
+    fn check_compat_blocks_without_force_for_incompatible_entry() {
+        let entry = CatalogEntry {
+            name: "claude-only",
+            description: "",
+            version: "0.1.0",
+            harness_compatibility: &["claude-code"],
+            source_path: "",
+        };
+        let err = check_compat(&entry, Harness::Codex, false).unwrap_err();
+        match err {
+            CliError::Incompatible { name, allowed } => {
+                assert_eq!(name, "claude-only");
+                assert_eq!(allowed, vec!["claude-code".to_string()]);
+            }
+            other => panic!("expected Incompatible, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn check_compat_bypasses_with_force_for_incompatible_entry() {
+        let entry = CatalogEntry {
+            name: "claude-only",
+            description: "",
+            version: "0.1.0",
+            harness_compatibility: &["claude-code"],
+            source_path: "",
+        };
+        check_compat(&entry, Harness::Codex, true).expect("--force must bypass the gate");
+    }
+
+    #[test]
+    fn check_compat_universal_entry_passes_without_force() {
+        let entry = CatalogEntry {
+            name: "anywhere",
+            description: "",
+            version: "0.1.0",
+            harness_compatibility: &[],
+            source_path: "",
+        };
+        check_compat(&entry, Harness::ClaudeCode, false).unwrap();
+        check_compat(&entry, Harness::Codex, false).unwrap();
+        check_compat(&entry, Harness::OpenCode, false).unwrap();
     }
 
     #[test]

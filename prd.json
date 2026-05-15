@@ -329,8 +329,8 @@
         "cargo test runs all tests green"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "End-to-end install/remove integration tests landed at src/external/tests/install_remove.rs (10 tests, all use the US-007 fake_*_project helpers + a new build_skill_tarball helper moved from installer.rs into tests/common/mod.rs so it can be shared across integration tests). To make the installer/state/harness modules callable from integration tests, the crate grew a `[lib]` artifact (src/external/src/lib.rs) re-exporting the modules as `pub`; main.rs now imports them via `use instinctagents::{cli, tui}`. Test coverage: install skill into fake_claude/codex/opencode_project (3 tests asserting `.claude|.codex|.opencode/skills/demo/SKILL.md` + `.instinctagents` state); install agents.md into fake_claude/codex/opencode_project (3 tests asserting delimited block + byte-for-byte preservation of pre-existing user content); remove skill (folder deleted + state pruned); remove agents.md (block dropped, user content preserved, state pruned); install with target-exists + OverwriteAction::Skip (existing preserved, state untouched); install with target-exists + OverwriteAction::Overwrite (existing replaced, state recorded). Per progress.txt's US-018 hook, the tests bypass `fetch_and_install_*` (network) and exercise `install_skill_from_tarball` / `install_agents_md_from_tarball` with in-memory archives — no mock HTTP server needed. The 'install incompatible skill with --force succeeds; without --force is blocked' AC is covered at the cli.rs unit level: the compat gate was de-duped into `cli::check_compat(entry, harness, force) -> Result<(), CliError>` (used by both Skill and AgentsMd branches of run_add), and 3 new unit tests assert (a) it blocks with Incompatible without force, (b) it bypasses with force=true, (c) universal entries pass without force. cargo check / clippy --all-targets -- -D warnings / test (144 unit + 22 integration: 10 new install_remove, plus existing cli_args/helpers_smoke/tui_exit) / build --release all green."
     },
     {
       "id": "US-019",

@@ -15,7 +15,9 @@
 #![allow(dead_code)]
 
 use std::fs;
+use std::io::Cursor;
 
+use flate2::{write::GzEncoder, Compression};
 use mockito::{Mock, ServerGuard};
 use tempfile::TempDir;
 
@@ -51,6 +53,29 @@ impl MockReleases {
     pub fn url(&self) -> String {
         self.server.url()
     }
+}
+
+/// Build a gzipped tar containing `<root>/<files...>`. Each entry is a
+/// regular file with the given body. Mirrors the layout produced by the
+/// release-packaging script (US-029): a single top-level directory named
+/// after the skill / integration containing its files.
+pub fn build_skill_tarball(root: &str, files: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut buf: Vec<u8> = Vec::new();
+    {
+        let gz = GzEncoder::new(&mut buf, Compression::default());
+        let mut tb = tar::Builder::new(gz);
+        for (rel, body) in files {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(body.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            let path = format!("{root}/{rel}");
+            tb.append_data(&mut header, &path, Cursor::new(body))
+                .expect("append tar entry");
+        }
+        tb.finish().expect("finalize tar");
+    }
+    buf
 }
 
 pub fn mock_github_releases(tag: &str, assets: &[(&str, &[u8])]) -> MockReleases {

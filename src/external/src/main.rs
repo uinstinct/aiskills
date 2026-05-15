@@ -1,13 +1,5 @@
-mod catalog;
-mod cli;
-mod harness;
-mod http;
-mod installer;
-mod state;
-mod tui;
-mod update;
-
 use clap::Parser;
+use instinctagents::{cli, tui};
 
 fn main() {
     let args = cli::Cli::parse();
