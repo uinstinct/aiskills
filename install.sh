@@ -28,6 +28,9 @@ check_platform() {
         Linux/x86_64|Linux/amd64)
             printf '%s' "instinctagents-linux-x86_64"
             ;;
+        Linux/aarch64|Linux/arm64)
+            printf '%s' "instinctagents-linux-aarch64"
+            ;;
         Darwin/arm64|Darwin/aarch64)
             printf '%s' "instinctagents-macos-arm64"
             ;;

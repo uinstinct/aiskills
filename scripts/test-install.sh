@@ -108,11 +108,13 @@ run_test() {
 
 # Success cases
 run_test "linux-x86_64"  Linux  x86_64  true  "instinctagents-linux-x86_64"
+run_test "linux-aarch64" Linux  aarch64 true  "instinctagents-linux-aarch64"
+run_test "linux-arm64"   Linux  arm64   true  "instinctagents-linux-aarch64"
 run_test "darwin-arm64"  Darwin arm64   true  "instinctagents-macos-arm64"
 run_test "darwin-x86_64" Darwin x86_64  true  "instinctagents-macos-x86_64"
 
 # Failure cases (unsupported platform)
-run_test "linux-aarch64" Linux  aarch64 false
+run_test "linux-i386"    Linux  i386    false
 run_test "darwin-i386"   Darwin i386    false
 
 if [ "$FAIL" -gt 0 ]; then

@@ -1,4 +1,4 @@
-# instinctagents
+# my personal ai skills
 
 A personal two-part Skill & `agents.md` registry:
 
@@ -15,12 +15,15 @@ curl -fsSL https://raw.githubusercontent.com/uinstinct/aiskills/main/install.sh 
 
 This downloads the latest release binary into the current directory as `./instinctagents`.
 
-**Supported platforms:** macOS arm64 (Apple Silicon), macOS x86_64 (Intel), Linux x86_64.
+**Supported platforms:** macOS arm64 (Apple Silicon), macOS x86_64 (Intel), Linux x86_64, Linux aarch64.
 
+<details>
+<summary>debugging for macos installation</summary>
 > **macOS users:** The binary is unsigned, so Gatekeeper may block it on first run. To allow it, either right-click the binary and choose **Open**, or run:
 > ```sh
 > xattr -d com.apple.quarantine ./instinctagents
 > ```
+</details>
 
 ## Usage
 
