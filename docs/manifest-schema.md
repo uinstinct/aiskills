@@ -1,7 +1,7 @@
 # manifest.yml schema
 
-Every entry in the instinctagents registry — both **skills** (`skills/<name>/manifest.yml`)
-and **agents.md integrations** (`agents.md/<name>/manifest.yml`) — ships with a
+Every entry in the instinctagents registry — both **skills** (`assets/skills/<name>/manifest.yml`)
+and **agents.md integrations** (`assets/agents.md/<name>/manifest.yml`) — ships with a
 `manifest.yml`. This file is the single source of truth that the build script
 (US-005) reads when baking the offline catalog into the CLI binary.
 
@@ -13,7 +13,7 @@ the build with an error identifying the offending file.
 
 | Field                   | Type             | Required | Default | Description                                                                                                                            |
 | ----------------------- | ---------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                  | string           | yes      | —       | Identifier for this entry. **Must match the folder name exactly** (e.g. `skills/foo/manifest.yml` requires `name: foo`).                |
+| `name`                  | string           | yes      | —       | Identifier for this entry. **Must match the folder name exactly** (e.g. `assets/skills/foo/manifest.yml` requires `name: foo`).        |
 | `description`           | string           | yes      | —       | One-line human-readable description shown in the TUI catalog row.                                                                       |
 | `version`               | string (semver)  | yes      | —       | Semantic version (e.g. `0.1.0`). Used by the release packager (US-029) to tag tarballs and by the installer to record installed state. |
 | `harness_compatibility` | array of strings | no       | `[]`    | Subset of `claude-code`, `codex`, `opencode`. Empty list or omitted means **compatible with all harnesses**.                            |
@@ -44,7 +44,7 @@ harness, unless the user passes `--force` (US-016).
 
 ## Example — skill manifest
 
-`skills/my-skill/manifest.yml`:
+`assets/skills/my-skill/manifest.yml`:
 
 ```yaml
 name: my-skill
@@ -64,7 +64,7 @@ version: 0.1.0
 
 ## Example — agents.md integration manifest
 
-`agents.md/my-integration/manifest.yml`:
+`assets/agents.md/my-integration/manifest.yml`:
 
 ```yaml
 name: my-integration

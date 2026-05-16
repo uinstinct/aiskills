@@ -21,8 +21,8 @@ See [`docs/manifest-schema.md`](./manifest-schema.md) for the per-entry
 
 | Key                   | Type            | Required | Description                                                              |
 | --------------------- | --------------- | -------- | ------------------------------------------------------------------------ |
-| `installed_skills`    | array of entry  | yes      | Every skill published in `skills/<name>/`.                              |
-| `installed_agents_md` | array of entry  | yes      | Every agents.md integration published in `agents.md/<name>/`.            |
+| `installed_skills`    | array of entry  | yes      | Every skill published in `assets/skills/<name>/`.                       |
+| `installed_agents_md` | array of entry  | yes      | Every agents.md integration published in `assets/agents.md/<name>/`.    |
 
 The key prefix `installed_` reflects the registry's perspective: an entry is
 "installed in the catalog." It does **not** describe what is installed inside
@@ -38,15 +38,15 @@ Every entry under either list has the same four fields. All are required.
 | `name`         | string          | yes      | Identifier for the entry. Must match the entry's folder basename and the `name` field of its `manifest.yml`.                                                            |
 | `version`      | string (semver) | yes      | Semantic version. Must match the `version` field of the entry's `manifest.yml`; the ingest scripts copy it from the manifest.                                          |
 | `source_url`   | string (URL)    | yes      | Upstream URL the entry was ingested from (GitHub repo, folder, or raw file URL).                                                                                       |
-| `install_path` | string (path)   | yes      | Path relative to the registry repo root, **with trailing slash**, pointing at the entry folder. For skills: `skills/<name>/`. For agents.md: `agents.md/<name>/`.       |
+| `install_path` | string (path)   | yes      | Path relative to the registry repo root, **with trailing slash**, pointing at the entry folder. For skills: `assets/skills/<name>/`. For agents.md: `assets/agents.md/<name>/`. |
 
 ### Constraints
 
 1. `name` is unique **within a list**, but a skill and an agents.md
    integration may share a name (the CLI disambiguates with `--type`; see
    US-016).
-2. `install_path` always begins with `skills/` for entries under
-   `installed_skills`, and `agents.md/` for entries under
+2. `install_path` always begins with `assets/skills/` for entries under
+   `installed_skills`, and `assets/agents.md/` for entries under
    `installed_agents_md`.
 3. The folder pointed to by `install_path` must exist and must contain a
    valid `manifest.yml` whose `name` and `version` match this entry. The
@@ -63,13 +63,13 @@ installed_skills:
   - name: my-skill
     version: 0.1.0
     source_url: https://github.com/example/my-skill
-    install_path: skills/my-skill/
+    install_path: assets/skills/my-skill/
 
 installed_agents_md:
   - name: my-integration
     version: 0.1.0
     source_url: https://github.com/example/my-integration
-    install_path: agents.md/my-integration/
+    install_path: assets/agents.md/my-integration/
 ```
 
 An empty-but-valid `mapping.yml` (useful as a starting point for a fresh

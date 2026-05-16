@@ -42,8 +42,8 @@ The tool detects your harness automatically by looking for files like `CLAUDE.md
 ## Repository layout
 
 ```
-skills/                 # one folder per skill, each with manifest.yml + SKILL.md
-agents.md/              # one folder per agents.md integration, each with manifest.yml + snippet.md
+assets/skills/          # one folder per skill, each with manifest.yml + SKILL.md
+assets/agents.md/       # one folder per agents.md integration, each with manifest.yml + snippet.md
 src/external/           # Rust source for the user-facing CLI/TUI binary
 src/internal/           # Python scripts used by maintainer slash commands
 mapping.yml             # registry catalog: every published skill and integration

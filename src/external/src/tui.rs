@@ -1415,8 +1415,8 @@ mod tests {
 
     #[test]
     fn build_add_rows_marks_installed_skills_and_agents() {
-        let skills = vec![entry("foo", "0.1.0", "foo desc", &[], "skills/foo")];
-        let agents = vec![entry("bar", "0.2.0", "bar desc", &[], "agents.md/bar")];
+        let skills = vec![entry("foo", "0.1.0", "foo desc", &[], "assets/skills/foo")];
+        let agents = vec![entry("bar", "0.2.0", "bar desc", &[], "assets/agents.md/bar")];
         let state = ProjectState {
             installed_skills: vec![InstalledItem {
                 name: "foo".into(),
@@ -1446,7 +1446,7 @@ mod tests {
             "0.1.0",
             "claude only",
             &["claude-code"],
-            "skills/claude-only",
+            "assets/skills/claude-only",
         )];
         let agents: Vec<CatalogEntry> = vec![];
         let state = ProjectState::default();
@@ -1460,7 +1460,7 @@ mod tests {
 
     #[test]
     fn build_add_rows_empty_compat_is_universal() {
-        let skills = vec![entry("any", "0.1.0", "any harness", &[], "skills/any")];
+        let skills = vec![entry("any", "0.1.0", "any harness", &[], "assets/skills/any")];
         let agents: Vec<CatalogEntry> = vec![];
         let state = ProjectState::default();
         for h in [Harness::ClaudeCode, Harness::Codex, Harness::OpenCode] {

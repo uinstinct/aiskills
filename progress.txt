@@ -2,3 +2,23 @@
 
 Each iteration appends one entry below describing what was implemented, files changed, and learnings.
 
+## Codebase Patterns
+- Registry content lives at `assets/skills/` and `assets/agents.md/` (moved from top-level in US-001). Code that previously hard-coded `skills/` or `agents.md/` paths needs to be updated everywhere — `src/external/build.rs`, `src/internal/lib.py`, and `scripts/package-release-assets.sh` all reference these directories.
+- `build.rs` resolves the repo root by walking up two parents from `CARGO_MANIFEST_DIR` (`src/external`), so it scans `assets/skills/` from there, not relative to the crate.
+- The `build.rs` invariant `manifest.name == parent folder basename` still holds after the assets/ move — only the prefix changed.
+- Test fixtures in `src/external/src/tui.rs` use literal install_path strings (e.g. `"assets/skills/foo"`); these are arbitrary test data, not on-disk paths, but should still match the canonical layout to keep the grep-clean property.
+- The PRD intentionally splits the move (US-001) from the build.rs update (US-002); `cargo build` is broken at the US-001 commit and restored at US-002.
+
+## 2026-05-16 - US-001
+- Moved `skills/` -> `assets/skills/` and `agents.md/` -> `assets/agents.md/` via `git mv` so history is preserved for all four entries (grill-me, storytelling-mastery-skill, write-a-skill, karpathy-guidelines).
+- Rewrote every `install_path` in `mapping.yml` to the new `assets/...` prefix.
+- Updated `docs/manifest-schema.md` and `docs/mapping-schema.md` example paths and prose to the new prefix; left the schema-of-paths constraint pointing at `assets/skills/<name>/` / `assets/agents.md/<name>/`.
+- Updated `README.md` Repository layout tree to show `assets/skills/` and `assets/agents.md/`.
+- Updated `scripts/package-release-assets.sh` to scan the new parent directories.
+- Updated test-fixture install_path strings in `src/external/src/tui.rs` so the acceptance grep is clean.
+- Files changed: `mapping.yml`, `README.md`, `docs/manifest-schema.md`, `docs/mapping-schema.md`, `scripts/package-release-assets.sh`, `src/external/src/tui.rs`, plus the renamed files under `assets/`.
+- **Learnings for future iterations:**
+  - The PRD's grep AC exempts `archive/`, `target/`, `.git/`, and `assets/` — the remaining matches in `prd.json` and `tasks/prd-assets-scaffold-codebuff.md` are literal copies of the grep pattern itself (PRD self-reference) and count as "intentional documentation history."
+  - `cargo build` is expected to fail at this commit; US-002 fixes `src/external/build.rs` to scan the new paths and restores the build.
+  - Use `git mv` and let Git's rename detection track history; don't `rm -rf` and re-create files.
+---

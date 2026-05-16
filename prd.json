@@ -17,8 +17,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "cargo build is intentionally broken between US-001 and US-002 per the PRD's technical considerations (the build.rs path constants are updated in US-002)."
     },
     {
       "id": "US-002",
