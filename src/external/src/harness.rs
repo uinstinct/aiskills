@@ -1,4 +1,4 @@
-//! Harness detection (Claude Code / Codex / OpenCode). Implemented in US-006.
+//! Harness detection (Claude Code / Codex / OpenCode / Codebuff).
 //!
 //! Looks at a project root and decides which coding-agent harness is in use,
 //! using a fixed priority order so projects that carry signals for multiple
@@ -13,6 +13,7 @@ pub enum Harness {
     ClaudeCode,
     Codex,
     OpenCode,
+    Codebuff,
 }
 
 impl Harness {
@@ -21,6 +22,7 @@ impl Harness {
             Harness::ClaudeCode => ".claude/skills/",
             Harness::Codex => ".codex/skills/",
             Harness::OpenCode => ".opencode/skills/",
+            Harness::Codebuff => ".agents/skills/",
         }
     }
 
@@ -29,14 +31,15 @@ impl Harness {
             Harness::ClaudeCode => "CLAUDE.md",
             Harness::Codex => "AGENTS.md",
             Harness::OpenCode => "AGENTS.md",
+            Harness::Codebuff => "AGENTS.md",
         }
     }
 }
 
 /// Detect the harness in use for `project_root`.
 ///
-/// Priority (first match wins): ClaudeCode → Codex → OpenCode. Returns `None`
-/// when no signal is present.
+/// Priority (first match wins): ClaudeCode → Codex → OpenCode → Codebuff.
+/// Returns `None` when no signal is present.
 pub fn detect(project_root: &Path) -> Option<Harness> {
     if project_root.join("CLAUDE.md").is_file() || project_root.join(".claude").is_dir() {
         return Some(Harness::ClaudeCode);
@@ -49,6 +52,9 @@ pub fn detect(project_root: &Path) -> Option<Harness> {
         || project_root.join(".opencode").is_dir()
     {
         return Some(Harness::OpenCode);
+    }
+    if project_root.join(".agents").is_dir() || project_root.join("knowledge.md").is_file() {
+        return Some(Harness::Codebuff);
     }
     None
 }
@@ -75,6 +81,7 @@ mod tests {
         assert_eq!(Harness::ClaudeCode.target_folder(), ".claude/skills/");
         assert_eq!(Harness::Codex.target_folder(), ".codex/skills/");
         assert_eq!(Harness::OpenCode.target_folder(), ".opencode/skills/");
+        assert_eq!(Harness::Codebuff.target_folder(), ".agents/skills/");
     }
 
     #[test]
@@ -82,6 +89,7 @@ mod tests {
         assert_eq!(Harness::ClaudeCode.agents_md_file(), "CLAUDE.md");
         assert_eq!(Harness::Codex.agents_md_file(), "AGENTS.md");
         assert_eq!(Harness::OpenCode.agents_md_file(), "AGENTS.md");
+        assert_eq!(Harness::Codebuff.agents_md_file(), "AGENTS.md");
     }
 
     #[test]
@@ -148,6 +156,36 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         touch(tmp.path(), "AGENTS.md");
         touch(tmp.path(), "opencode.json");
+        assert_eq!(detect(tmp.path()), Some(Harness::Codex));
+    }
+
+    #[test]
+    fn detects_codebuff_via_agents_dir() {
+        let tmp = TempDir::new().unwrap();
+        mkdir(tmp.path(), ".agents");
+        assert_eq!(detect(tmp.path()), Some(Harness::Codebuff));
+    }
+
+    #[test]
+    fn detects_codebuff_via_knowledge_md() {
+        let tmp = TempDir::new().unwrap();
+        touch(tmp.path(), "knowledge.md");
+        assert_eq!(detect(tmp.path()), Some(Harness::Codebuff));
+    }
+
+    #[test]
+    fn priority_claude_beats_codebuff() {
+        let tmp = TempDir::new().unwrap();
+        touch(tmp.path(), "CLAUDE.md");
+        mkdir(tmp.path(), ".agents");
+        assert_eq!(detect(tmp.path()), Some(Harness::ClaudeCode));
+    }
+
+    #[test]
+    fn priority_codex_beats_codebuff() {
+        let tmp = TempDir::new().unwrap();
+        touch(tmp.path(), "AGENTS.md");
+        mkdir(tmp.path(), ".agents");
         assert_eq!(detect(tmp.path()), Some(Harness::Codex));
     }
 

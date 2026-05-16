@@ -210,6 +210,7 @@ pub fn is_compatible(entry: &CatalogEntry, harness: Harness) -> bool {
         Harness::ClaudeCode => "claude-code",
         Harness::Codex => "codex",
         Harness::OpenCode => "opencode",
+        Harness::Codebuff => "codebuff",
     };
     entry.harness_compatibility.contains(&tag)
 }

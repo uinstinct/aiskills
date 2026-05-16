@@ -88,6 +88,7 @@ pub(crate) fn harness_tag(h: Harness) -> &'static str {
         Harness::ClaudeCode => "claude-code",
         Harness::Codex => "codex",
         Harness::OpenCode => "opencode",
+        Harness::Codebuff => "codebuff",
     }
 }
 
@@ -841,6 +842,7 @@ fn render_header(f: &mut Frame, app: &App, area: Rect) {
         Some(Harness::ClaudeCode) => ("Harness: Claude Code", Style::default().fg(Color::Green)),
         Some(Harness::Codex) => ("Harness: Codex", Style::default().fg(Color::Green)),
         Some(Harness::OpenCode) => ("Harness: OpenCode", Style::default().fg(Color::Green)),
+        Some(Harness::Codebuff) => ("Harness: Codebuff", Style::default().fg(Color::Green)),
         None => ("No harness detected", Style::default().fg(Color::Yellow)),
     };
     let header = Paragraph::new(Span::styled(label, style)).block(
