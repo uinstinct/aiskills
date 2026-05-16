@@ -17,8 +17,8 @@ Accepts one of three URL shapes:
 
 In every case the script:
 
-1. Writes contents under ``skills/<name>/`` (and/or
-   ``agents.md/<name>/`` for the "both" branch).
+1. Writes contents under ``assets/skills/<name>/`` (and/or
+   ``assets/agents.md/<name>/`` for the "both" branch).
 2. Scaffolds ``manifest.yml`` if the source didn't provide one,
    prompting for ``description`` and ``version``.
 3. Adds or replaces the entry in top-level ``mapping.yml``.
@@ -52,7 +52,6 @@ from lib import (
     load_mapping,
     parse_github_url,
     prompt_choice,
-    prompt_text,
     repo_root,
     sanitize_name,
     scaffold_agents_md_manifest,
@@ -77,7 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing skills/<name>/ or agents.md/<name>/ entries.",
+        help="Overwrite existing assets/skills/<name>/ or assets/agents.md/<name>/ entries.",
     )
     parser.add_argument(
         "--as",

@@ -28,8 +28,9 @@ from urllib.parse import unquote, urlparse
 import yaml
 
 MAPPING_FILE_NAME = "mapping.yml"
-SKILLS_DIR_NAME = "skills"
-AGENTS_MD_DIR_NAME = "agents.md"
+ASSETS_DIR_NAME = "assets"
+SKILLS_DIR_NAME = f"{ASSETS_DIR_NAME}/skills"
+AGENTS_MD_DIR_NAME = f"{ASSETS_DIR_NAME}/agents.md"
 MANIFEST_FILE_NAME = "manifest.yml"
 
 SKILLS_KEY = "installed_skills"

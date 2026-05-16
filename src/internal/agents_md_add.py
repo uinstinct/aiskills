@@ -18,7 +18,7 @@ Accepts one of three URL shapes:
 
 In every case the script:
 
-1. Writes contents under ``agents.md/<name>/`` (snippet.md + manifest.yml).
+1. Writes contents under ``assets/agents.md/<name>/`` (snippet.md + manifest.yml).
 2. Scaffolds ``manifest.yml`` if the source didn't provide one,
    prompting for ``description``, ``version``, and
    ``harness_compatibility``.
@@ -78,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite an existing agents.md/<name>/ entry.",
+        help="Overwrite an existing assets/agents.md/<name>/ entry.",
     )
     return parser
 

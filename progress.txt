@@ -4,10 +4,28 @@ Each iteration appends one entry below describing what was implemented, files ch
 
 ## Codebase Patterns
 - Registry content lives at `assets/skills/` and `assets/agents.md/` (moved from top-level in US-001). Code that previously hard-coded `skills/` or `agents.md/` paths needs to be updated everywhere — `src/external/build.rs`, `src/internal/lib.py`, and `scripts/package-release-assets.sh` all reference these directories.
+- Path helpers in `src/internal/lib.py`: `ASSETS_DIR_NAME = "assets"`, `SKILLS_DIR_NAME = "assets/skills"`, `AGENTS_MD_DIR_NAME = "assets/agents.md"`. The two-segment values flow through `pathlib.Path` operators fine (`root / SKILLS_DIR_NAME / name` -> `root/assets/skills/name`). All ingest/remove scripts under `src/internal/` go through `entry_dir(kind, name)` and `install_path_for(kind, name)` — never hard-code path literals.
 - `build.rs` resolves the repo root by walking up two parents from `CARGO_MANIFEST_DIR` (`src/external`), so it scans `assets/skills/` from there, not relative to the crate.
 - The `build.rs` invariant `manifest.name == parent folder basename` still holds after the assets/ move — only the prefix changed.
 - Test fixtures in `src/external/src/tui.rs` use literal install_path strings (e.g. `"assets/skills/foo"`); these are arbitrary test data, not on-disk paths, but should still match the canonical layout to keep the grep-clean property.
 - The PRD intentionally splits the move (US-001) from the build.rs update (US-002); `cargo build` is broken at the US-001 commit and restored at US-002.
+
+## 2026-05-16 - US-003
+- Centralized the assets/ prefix in `src/internal/lib.py`. Added `ASSETS_DIR_NAME = "assets"` and changed `SKILLS_DIR_NAME` / `AGENTS_MD_DIR_NAME` to `"assets/skills"` / `"assets/agents.md"`. The `entry_dir(kind, name)` and `install_path_for(kind, name)` helpers now automatically return `assets/...`-prefixed paths.
+- Updated docstrings and `--help` strings in `skill_add.py`, `agents_md_add.py`, `skill_remove.py`, `agents_md_remove.py`, and `src/internal/README.md` to reference the new `assets/...` paths.
+- Removed a pre-existing unused `prompt_text` import in `skill_add.py` so `ruff check src/internal/` passes cleanly.
+- Smoke tests:
+  - `uv run --project src/internal python src/internal/skill_list.py --json` reports `install_path: assets/skills/<name>/` for grill-me / storytelling-mastery-skill / write-a-skill.
+  - `agents_md_list.py --json` reports `install_path: assets/agents.md/karpathy-guidelines/`.
+  - Created a temp `ralph-test-entry` under both `assets/skills/` and `assets/agents.md/` via the lib helpers, then ran `skill_remove --name ralph-test-entry` and `agents_md_remove --name ralph-test-entry`; both deleted the on-disk folders and pruned `mapping.yml`.
+- `cargo build` + `cargo test` both pass (unchanged: 2 unit + 0 integration tests in the smoke run; full suite verified in US-002).
+- Files changed: `src/internal/lib.py`, `src/internal/skill_add.py`, `src/internal/agents_md_add.py`, `src/internal/skill_remove.py`, `src/internal/agents_md_remove.py`, `src/internal/README.md`.
+- **Learnings for future iterations:**
+  - The `entry_dir` / `install_path_for` helpers in `lib.py` are now the single source of truth for registry paths under `src/internal/`. Future scaffold commands (US-008 / US-009) MUST go through them — don't write `f"assets/skills/{name}"` literals.
+  - `pathlib.Path` accepts multi-segment strings (`Path("assets/skills") / "foo"` -> `assets/skills/foo`); no need to split `ASSETS_DIR_NAME` and `SKILLS_DIR_NAME` apart.
+  - There's no ruff config or test runner pinned for `src/internal/` (no `ruff.toml`, no `tests/` folder, only a `pyproject.toml` with the runtime dep). The pre-existing `prompt_text` unused import means earlier work didn't run ruff; future stories that add code here should `uvx ruff check src/internal/` before committing.
+  - `uv run` resolves the script path relative to the project root, not the cwd, so always invoke as `uv run --project src/internal python src/internal/<script>.py` from the repo root.
+---
 
 ## 2026-05-16 - US-002
 - Updated `src/external/build.rs` to scan `assets/skills/` and `assets/agents.md/` instead of the old top-level paths. The `scan_dir` label parameter now carries the full prefix (`assets/skills` / `assets/agents.md`), which flows through to both the cargo rerun-if-changed directive (`dir.display()`) and the panic messages on missing/malformed manifests (`manifest_path.display()`).
