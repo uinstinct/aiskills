@@ -417,6 +417,52 @@ def prompt_text(question: str, default: str | None = None) -> str:
     return raw
 
 
+def prompt_multi_choice(prompt: str, options: list[str]) -> list[str]:
+    """Prompt for a subset of ``options`` and return the user's picks.
+
+    Accepts comma-separated 1-based indices (``1,3``), comma-separated
+    labels (``claude-code, codex``), or a mix. Whitespace around tokens
+    is stripped. Empty input (or whitespace-only) returns ``[]`` —
+    callers interpret this as "no selection" (typically "all" in the
+    scaffold flow).
+
+    Invalid input — an unknown label or an out-of-range index — prints
+    an error and re-prompts rather than crashing. Returned picks are
+    deduplicated while preserving the order in which they were entered.
+    """
+    require_tty(prompt)
+    while True:
+        print(prompt, file=sys.stderr)
+        for idx, option in enumerate(options, start=1):
+            print(f"  [{idx}] {option}", file=sys.stderr)
+        raw = input("choices> ").strip()
+        if not raw:
+            return []
+        tokens = [t.strip() for t in raw.split(",") if t.strip()]
+        if not tokens:
+            return []
+        selected: list[str] = []
+        error: str | None = None
+        for token in tokens:
+            if token.isdigit():
+                idx = int(token)
+                if not 1 <= idx <= len(options):
+                    error = f"index out of range: {token}"
+                    break
+                pick = options[idx - 1]
+            elif token in options:
+                pick = token
+            else:
+                error = f"invalid choice: {token!r}"
+                break
+            if pick not in selected:
+                selected.append(pick)
+        if error is not None:
+            print(error, file=sys.stderr)
+            continue
+        return selected
+
+
 # ---------------------------------------------------------------------------
 # Manifest scaffolding
 # ---------------------------------------------------------------------------
