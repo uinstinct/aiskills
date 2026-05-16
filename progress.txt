@@ -15,6 +15,23 @@ Each iteration appends one entry below describing what was implemented, files ch
 - Test fixtures in `src/external/src/tui.rs` use literal install_path strings (e.g. `"assets/skills/foo"`); these are arbitrary test data, not on-disk paths, but should still match the canonical layout to keep the grep-clean property.
 - The PRD intentionally splits the move (US-001) from the build.rs update (US-002); `cargo build` is broken at the US-001 commit and restored at US-002.
 
+## 2026-05-16 - US-010
+- Updated README.md for the Codebuff harness and the two new scaffold commands.
+  - Header line: "Supports the **Claude Code**, **Codex**, **OpenCode**, and **Codebuff** harnesses."
+  - Usage paragraph: "Run the binary inside any project that uses Claude Code, Codex, OpenCode, or Codebuff."
+  - Harness-detection paragraph appended a sentence: Codebuff is matched **last**, via `.agents/` directory or `knowledge.md` file, and never shadows the higher-priority signals.
+  - `## For maintainers` section split into two flows: an ingest block (`/skill-add`, `/agents-md-add`) and a scaffold block (`/skill-new`, `/agents-md-new`), each with a one-line description.
+- Repository-layout tree already showed `assets/skills/` and `assets/agents.md/` from US-001 — no change needed.
+- No top-level CHANGELOG / release-notes file exists at the repo root (`ls` and `Glob CHANGELOG*` both empty), so the optional bullet was skipped per the AC.
+- Grep confirmed no remaining `^skills/`, `^agents\.md/`, ``` `skills/ ```, ``` `agents.md/ ```, `"skills/`, or `"agents.md/"` matches in README.md.
+- `cargo build` clean (no Rust changes; doc-only commit). README is the sole file touched.
+- Files changed: `README.md`.
+- **Learnings for future iterations:**
+  - All ten user stories in `prd.json` now have `passes: true`. After committing this story and the PRD update, the Ralph stop condition fires — return `<promise>COMPLETE</promise>`.
+  - The README's harness list is the user-visible source of truth for "supported harnesses." When a fifth harness is added, four spots need to change in the README: header line (line 8), usage paragraph (line 27), harness-detection sentence (line 40), and the maintainer-section examples if any new slash commands are added. The exhaustive-match Rust sites (per the existing Codebase Patterns entry) are separate from this docs sweep.
+  - The "Codebuff matched LAST" wording mirrors the priority order baked into `harness.rs::detect()`; if a future story reorders priorities, both the code and this README sentence need to update.
+---
+
 ## 2026-05-16 - US-009
 - Added `src/internal/agents_md_new.py` — interactive scaffold for a local-only agents.md integration. Single positional `<name>` + `--force`. Mirrors `skill_new.py` exactly: sanitizes the name, collision-checks `mapping.yml` + `assets/agents.md/<name>/`, then prompts for description (re-prompts on empty), version (default `0.1.0`, re-prompts on invalid semver via `is_semver`), and harness_compatibility (multi-select via `prompt_multi_choice` over the four `ALLOWED_HARNESSES`). Writes `snippet.md` (`# <name>\n\nTODO: describe the integration`) and a `manifest.yml` with `snippet_file: snippet.md` (the agents.md analogue of `entrypoint: SKILL.md`). Upserts a `source_url: local` row in `mapping.yml` via `upsert_catalog_entry("agents-md", ...)`. Non-TTY rejected up-front.
 - Slash-command wrappers: `.claude/commands/agents-md-new.md`, `.codex/skills/agents-md-new/SKILL.md`, `.opencode/commands/agents-md-new.md`, all delegating to `uv run --project src/internal python src/internal/agents_md_new.py $ARGUMENTS`. Each documents the prompts and the non-TTY failure mode.

@@ -5,7 +5,7 @@ A personal two-part Skill & `agents.md` registry:
 - A single-binary **Rust CLI with TUI** (`instinctagents`) for installing/removing cataloged skills and `agents.md` snippets in any project.
 - An **agentic internal tool** for maintainers that ingests entries from GitHub URLs into this registry repo.
 
-Supports the **Claude Code**, **Codex**, and **OpenCode** harnesses.
+Supports the **Claude Code**, **Codex**, **OpenCode**, and **Codebuff** harnesses.
 
 ## Install
 
@@ -24,7 +24,7 @@ This downloads the latest release binary into the current directory as `./instin
 
 ## Usage
 
-Run the binary inside any project that uses Claude Code, Codex, or OpenCode:
+Run the binary inside any project that uses Claude Code, Codex, OpenCode, or Codebuff:
 
 ```sh
 ./instinctagents
@@ -37,7 +37,7 @@ The TUI opens on the **Add** tab. Use Tab / Shift+Tab to switch between **Add**,
 - **List** - read-only view of what's installed.
 - **Update** - check whether a newer version of the binary is available.
 
-The tool detects your harness automatically by looking for files like `CLAUDE.md`, `AGENTS.md`, or `opencode.json`.
+The tool detects your harness automatically by looking for files like `CLAUDE.md`, `AGENTS.md`, or `opencode.json`. Codebuff is matched **last**, via a `.agents/` directory or a `knowledge.md` file at the project root, so it never shadows a Claude Code, Codex, or OpenCode signal when those coexist.
 
 ## Repository layout
 
@@ -54,14 +54,23 @@ mapping.yml             # registry catalog: every published skill and integratio
 
 **Prerequisites:** Install [uv](https://docs.astral.sh/uv/getting-started/installation/) — it is the only Python tool you need. `uv` manages the interpreter and dependencies automatically.
 
-Add a new skill or integration from a GitHub URL via the slash commands shipped in `.claude/commands/`, `.codex/skills/`, and `.opencode/commands/`:
+Slash commands shipped in `.claude/commands/`, `.codex/skills/`, and `.opencode/commands/` cover two flows:
+
+**Ingest from a GitHub URL:**
 
 ```
-/skill-add <github-url>
-/agents-md-add <github-url>
+/skill-add <github-url>          # fetch a skill from GitHub and add it to the registry
+/agents-md-add <github-url>      # fetch an agents.md integration from GitHub and add it to the registry
 ```
 
-These delegate to the Python scripts under `src/internal/`, which are invoked via `uv run --project src/internal`.
+**Scaffold a new local-only entry:**
+
+```
+/skill-new <name>                # interactively author a new local skill under assets/skills/<name>/
+/agents-md-new <name>            # interactively author a new local agents.md integration under assets/agents.md/<name>/
+```
+
+All four delegate to the Python scripts under `src/internal/`, which are invoked via `uv run --project src/internal`.
 
 ## License
 
