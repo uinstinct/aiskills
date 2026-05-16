@@ -36,7 +36,16 @@ MANIFEST_FILE_NAME = "manifest.yml"
 SKILLS_KEY = "installed_skills"
 AGENTS_MD_KEY = "installed_agents_md"
 
-ALLOWED_HARNESSES = ("claude-code", "codex", "opencode")
+ALLOWED_HARNESSES = ("claude-code", "codex", "opencode", "codebuff")
+
+_SEMVER_RE = re.compile(
+    r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
+
+
+def is_semver(value: str) -> bool:
+    """Return True if ``value`` is a valid SemVer 2.0.0 version string."""
+    return bool(_SEMVER_RE.match(value))
 
 USER_AGENT = "instinctagents-ingest/1"
 GITHUB_API = "https://api.github.com"
