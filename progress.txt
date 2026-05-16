@@ -4,12 +4,28 @@ Each iteration appends one entry below describing what was implemented, files ch
 
 ## Codebase Patterns
 - The `Harness` enum is matched exhaustively in three places besides `harness.rs` itself: `cli.rs::is_compatible` (tag mapping), `tui.rs::harness_tag` (tag mapping), and `tui.rs::render_header` (status-area label). When adding a new harness variant, ALL FOUR sites must be updated together or `cargo build` fails. The registry-side tag string (`"claude-code"`, `"codex"`, `"opencode"`, `"codebuff"`) must match what manifests use for `harness_compatibility`.
+- The build-time manifest `harness_compatibility` allow-list lives in `src/external/src/manifest_validation.rs` (`ALLOWED_HARNESS_COMPATIBILITY`, `is_allowed_harness`). `build.rs` consumes it via `include!("src/manifest_validation.rs")` inside a `mod manifest_validation { ... }` wrapper; `lib.rs` exposes the same file as `pub mod manifest_validation`. When adding a new harness tag (e.g. a fifth one), add it to that single constant — both the build-time validator and the catalog.rs parse test pick it up automatically. Inner doc comments (`//!`) are illegal at the top of files consumed via `include!`; use `//` instead.
 - Registry content lives at `assets/skills/` and `assets/agents.md/` (moved from top-level in US-001). Code that previously hard-coded `skills/` or `agents.md/` paths needs to be updated everywhere — `src/external/build.rs`, `src/internal/lib.py`, and `scripts/package-release-assets.sh` all reference these directories.
 - Path helpers in `src/internal/lib.py`: `ASSETS_DIR_NAME = "assets"`, `SKILLS_DIR_NAME = "assets/skills"`, `AGENTS_MD_DIR_NAME = "assets/agents.md"`. The two-segment values flow through `pathlib.Path` operators fine (`root / SKILLS_DIR_NAME / name` -> `root/assets/skills/name`). All ingest/remove scripts under `src/internal/` go through `entry_dir(kind, name)` and `install_path_for(kind, name)` — never hard-code path literals.
 - `build.rs` resolves the repo root by walking up two parents from `CARGO_MANIFEST_DIR` (`src/external`), so it scans `assets/skills/` from there, not relative to the crate.
 - The `build.rs` invariant `manifest.name == parent folder basename` still holds after the assets/ move — only the prefix changed.
 - Test fixtures in `src/external/src/tui.rs` use literal install_path strings (e.g. `"assets/skills/foo"`); these are arbitrary test data, not on-disk paths, but should still match the canonical layout to keep the grep-clean property.
 - The PRD intentionally splits the move (US-001) from the build.rs update (US-002); `cargo build` is broken at the US-001 commit and restored at US-002.
+
+## 2026-05-16 - US-005
+- Added `codebuff` as the fourth accepted `harness_compatibility` value in build-time manifest validation.
+- Extracted the allow-list into a shared module `src/external/src/manifest_validation.rs` exposing `ALLOWED_HARNESS_COMPATIBILITY: &[&str]` and `is_allowed_harness(&str) -> bool`. `build.rs` consumes it via `include!("src/manifest_validation.rs")` inside a local `mod manifest_validation` so the same allow-list governs both the build-time panic-on-invalid path and runtime unit tests.
+- Updated the build.rs panic message to interpolate `ALLOWED_HARNESS_COMPATIBILITY.join(", ")` instead of a hard-coded literal, so adding a fifth harness in the future only requires editing one place.
+- Added unit tests in `manifest_validation.rs` (`accepts_all_four_harness_tags`, `rejects_unknown_harness_tags`) and in `catalog.rs` (`manifest_with_codebuff_harness_parses_and_validates`) — the latter parses a real manifest YAML via serde_yaml and asserts the validator accepts `codebuff`. Added `serde_yaml = "0.9"` as a dev-dependency (it was already a build-dependency).
+- Updated `docs/manifest-schema.md`: table cell, allowed-values bullet list, validation rule wording ("four" instead of "three"), plus a new "skill that targets Codebuff specifically" example block.
+- `cargo build` clean. `cargo test`: 150 unit tests + 22 integration tests pass (3 new unit tests added vs US-004's 147). `cargo clippy --all-targets -- -D warnings` clean.
+- Files changed: `src/external/build.rs`, `src/external/Cargo.toml`, `src/external/src/lib.rs`, `src/external/src/catalog.rs`, `src/external/src/manifest_validation.rs` (new), `docs/manifest-schema.md`.
+- **Learnings for future iterations:**
+  - `include!()` inside build.rs can pull a file from `src/` so build-script and library can share constants without a separate crate. Caveat: inner doc comments (`//!`) at the top of the included file break compilation because `include!` splices the content into the calling scope where module-level inner-docs aren't valid. Use regular `//` comments or outer `///` docs in shared-via-include files.
+  - The compiled `#[cfg(test)] mod tests` inside the included file is harmless — `cfg(test)` is false when build.rs is compiled, so the test module is excluded there but still runs through `cargo test` when the file is also loaded as a normal `pub mod` from `lib.rs`.
+  - `serde_yaml` is now BOTH a build-dependency and a dev-dependency. Cargo handles this fine; the dev-dep is needed because catalog.rs's parse test runs at `cargo test` time, not at build time.
+  - Future harness additions need only: (1) extend `ALLOWED_HARNESS_COMPATIBILITY` in `manifest_validation.rs`, (2) add the Harness enum arm + the four exhaustive-match sites called out in the Codebase Patterns section, (3) update `docs/manifest-schema.md`.
+---
 
 ## 2026-05-16 - US-004
 - Added `Harness::Codebuff` variant in `src/external/src/harness.rs`. `target_folder()` returns `.agents/skills/`, `agents_md_file()` returns `AGENTS.md`.

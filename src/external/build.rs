@@ -12,6 +12,11 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+mod manifest_validation {
+    include!("src/manifest_validation.rs");
+}
+use manifest_validation::{is_allowed_harness, ALLOWED_HARNESS_COMPATIBILITY};
+
 #[derive(Debug, Deserialize)]
 struct Manifest {
     name: String,
@@ -89,11 +94,12 @@ fn scan_dir(repo_root: &Path, label: &str) -> Vec<(String, Manifest)> {
         }
 
         for h in &manifest.harness_compatibility {
-            if !matches!(h.as_str(), "claude-code" | "codex" | "opencode") {
+            if !is_allowed_harness(h) {
                 panic!(
-                    "manifest at {} has invalid harness_compatibility entry {:?} (allowed: claude-code, codex, opencode)",
+                    "manifest at {} has invalid harness_compatibility entry {:?} (allowed: {})",
                     manifest_path.display(),
-                    h
+                    h,
+                    ALLOWED_HARNESS_COMPATIBILITY.join(", ")
                 );
             }
         }

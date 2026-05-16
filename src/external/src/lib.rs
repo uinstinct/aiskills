@@ -7,6 +7,7 @@ pub mod cli;
 pub mod harness;
 pub mod http;
 pub mod installer;
+pub mod manifest_validation;
 pub mod state;
 pub mod tui;
 pub mod update;
