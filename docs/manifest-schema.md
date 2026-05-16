@@ -1,7 +1,7 @@
 # manifest.yml schema
 
-Every entry in the instinctagents registry — both **skills** (`skills/<name>/manifest.yml`)
-and **agents.md integrations** (`agents.md/<name>/manifest.yml`) — ships with a
+Every entry in the instinctagents registry — both **skills** (`assets/skills/<name>/manifest.yml`)
+and **agents.md integrations** (`assets/agents.md/<name>/manifest.yml`) — ships with a
 `manifest.yml`. This file is the single source of truth that the build script
 (US-005) reads when baking the offline catalog into the CLI binary.
 
@@ -13,18 +13,19 @@ the build with an error identifying the offending file.
 
 | Field                   | Type             | Required | Default | Description                                                                                                                            |
 | ----------------------- | ---------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                  | string           | yes      | —       | Identifier for this entry. **Must match the folder name exactly** (e.g. `skills/foo/manifest.yml` requires `name: foo`).                |
+| `name`                  | string           | yes      | —       | Identifier for this entry. **Must match the folder name exactly** (e.g. `assets/skills/foo/manifest.yml` requires `name: foo`).        |
 | `description`           | string           | yes      | —       | One-line human-readable description shown in the TUI catalog row.                                                                       |
 | `version`               | string (semver)  | yes      | —       | Semantic version (e.g. `0.1.0`). Used by the release packager (US-029) to tag tarballs and by the installer to record installed state. |
-| `harness_compatibility` | array of strings | no       | `[]`    | Subset of `claude-code`, `codex`, `opencode`. Empty list or omitted means **compatible with all harnesses**.                            |
+| `harness_compatibility` | array of strings | no       | `[]`    | Subset of `claude-code`, `codex`, `opencode`, `codebuff`. Empty list or omitted means **compatible with all harnesses**.                |
 
 ### `harness_compatibility` values
 
-Only these three string values are accepted:
+Only these four string values are accepted:
 
 - `claude-code`
 - `codex`
 - `opencode`
+- `codebuff`
 
 Any other value is a validation error. The CLI's Add tab (US-012) dims and
 disables rows whose `harness_compatibility` does not include the detected
@@ -44,7 +45,7 @@ harness, unless the user passes `--force` (US-016).
 
 ## Example — skill manifest
 
-`skills/my-skill/manifest.yml`:
+`assets/skills/my-skill/manifest.yml`:
 
 ```yaml
 name: my-skill
@@ -64,7 +65,7 @@ version: 0.1.0
 
 ## Example — agents.md integration manifest
 
-`agents.md/my-integration/manifest.yml`:
+`assets/agents.md/my-integration/manifest.yml`:
 
 ```yaml
 name: my-integration
@@ -86,6 +87,16 @@ harness_compatibility:
   - claude-code
 ```
 
+A skill that targets Codebuff specifically:
+
+```yaml
+name: codebuff-only-skill
+description: Demonstrates a skill that targets Codebuff.
+version: 0.1.0
+harness_compatibility:
+  - codebuff
+```
+
 ## Validation rules (build-time)
 
 The build script enforces:
@@ -94,7 +105,7 @@ The build script enforces:
 2. All required fields are present and non-empty.
 3. `name` equals the parent folder's basename.
 4. `version` parses as semver (`MAJOR.MINOR.PATCH`, optional pre-release).
-5. Every entry in `harness_compatibility` is one of the three allowed values.
+5. Every entry in `harness_compatibility` is one of the four allowed values.
 6. `entrypoint` (skills) or `snippet_file` (agents.md) — when present — points to a file that exists in the folder.
 
 A failure on any of these stops the cargo build with an error message that

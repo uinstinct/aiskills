@@ -210,6 +210,7 @@ pub fn is_compatible(entry: &CatalogEntry, harness: Harness) -> bool {
         Harness::ClaudeCode => "claude-code",
         Harness::Codex => "codex",
         Harness::OpenCode => "opencode",
+        Harness::Codebuff => "codebuff",
     };
     entry.harness_compatibility.contains(&tag)
 }
@@ -546,6 +547,7 @@ mod tests {
         assert!(is_compatible(&entry, Harness::ClaudeCode));
         assert!(is_compatible(&entry, Harness::Codex));
         assert!(is_compatible(&entry, Harness::OpenCode));
+        assert!(is_compatible(&entry, Harness::Codebuff));
     }
 
     #[test]
@@ -591,6 +593,43 @@ mod tests {
         check_compat(&entry, Harness::ClaudeCode, false).unwrap();
         check_compat(&entry, Harness::Codex, false).unwrap();
         check_compat(&entry, Harness::OpenCode, false).unwrap();
+        check_compat(&entry, Harness::Codebuff, false).unwrap();
+    }
+
+    #[test]
+    fn check_compat_force_bypasses_for_codebuff_incompatible_entry() {
+        let entry = CatalogEntry {
+            name: "claude-only",
+            description: "",
+            version: "0.1.0",
+            harness_compatibility: &["claude-code"],
+            source_path: "",
+        };
+        let err = check_compat(&entry, Harness::Codebuff, false).unwrap_err();
+        match err {
+            CliError::Incompatible { name, allowed } => {
+                assert_eq!(name, "claude-only");
+                assert_eq!(allowed, vec!["claude-code".to_string()]);
+            }
+            other => panic!("expected Incompatible, got {other:?}"),
+        }
+        check_compat(&entry, Harness::Codebuff, true)
+            .expect("--force must allow installing an incompatible entry into a Codebuff project");
+    }
+
+    #[test]
+    fn is_compatible_recognizes_codebuff_tag() {
+        let entry = CatalogEntry {
+            name: "codebuff-only",
+            description: "",
+            version: "0.0.0",
+            harness_compatibility: &["codebuff"],
+            source_path: "",
+        };
+        assert!(is_compatible(&entry, Harness::Codebuff));
+        assert!(!is_compatible(&entry, Harness::ClaudeCode));
+        assert!(!is_compatible(&entry, Harness::Codex));
+        assert!(!is_compatible(&entry, Harness::OpenCode));
     }
 
     #[test]
@@ -605,6 +644,7 @@ mod tests {
         assert!(is_compatible(&entry, Harness::ClaudeCode));
         assert!(!is_compatible(&entry, Harness::Codex));
         assert!(!is_compatible(&entry, Harness::OpenCode));
+        assert!(!is_compatible(&entry, Harness::Codebuff));
     }
 
     #[test]

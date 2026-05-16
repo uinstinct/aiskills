@@ -1,7 +1,7 @@
 //! Build script for US-005.
 //!
-//! Walks `skills/<name>/manifest.yml` and `agents.md/<name>/manifest.yml` from
-//! the workspace root and emits a generated Rust file in `OUT_DIR` that
+//! Walks `assets/skills/<name>/manifest.yml` and `assets/agents.md/<name>/manifest.yml`
+//! from the workspace root and emits a generated Rust file in `OUT_DIR` that
 //! `catalog.rs` pulls in via `include!`. Any missing or malformed manifest
 //! aborts the build with a message naming the offending file.
 
@@ -11,6 +11,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+
+mod manifest_validation {
+    include!("src/manifest_validation.rs");
+}
+use manifest_validation::{is_allowed_harness, ALLOWED_HARNESS_COMPATIBILITY};
 
 #[derive(Debug, Deserialize)]
 struct Manifest {
@@ -30,8 +35,8 @@ fn main() {
         .expect("CARGO_MANIFEST_DIR must live at <repo>/src/external")
         .to_path_buf();
 
-    let skills = scan_dir(&repo_root, "skills");
-    let agents_md = scan_dir(&repo_root, "agents.md");
+    let skills = scan_dir(&repo_root, "assets/skills");
+    let agents_md = scan_dir(&repo_root, "assets/agents.md");
 
     let mut out = String::new();
     render_section(&mut out, "SKILLS", &skills);
@@ -89,11 +94,12 @@ fn scan_dir(repo_root: &Path, label: &str) -> Vec<(String, Manifest)> {
         }
 
         for h in &manifest.harness_compatibility {
-            if !matches!(h.as_str(), "claude-code" | "codex" | "opencode") {
+            if !is_allowed_harness(h) {
                 panic!(
-                    "manifest at {} has invalid harness_compatibility entry {:?} (allowed: claude-code, codex, opencode)",
+                    "manifest at {} has invalid harness_compatibility entry {:?} (allowed: {})",
                     manifest_path.display(),
-                    h
+                    h,
+                    ALLOWED_HARNESS_COMPATIBILITY.join(", ")
                 );
             }
         }
@@ -108,9 +114,9 @@ fn render_section(out: &mut String, const_name: &str, items: &[(String, Manifest
     writeln!(out, "pub const {const_name}: &[CatalogEntry] = &[").unwrap();
     for (folder, m) in items {
         let label = if const_name == "SKILLS" {
-            "skills"
+            "assets/skills"
         } else {
-            "agents.md"
+            "assets/agents.md"
         };
         let source_path = format!("{label}/{folder}");
         let hc = m

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Remove an agents.md integration from the registry by name.
 
-Deletes ``agents.md/<name>/`` and prunes the corresponding entry from
+Deletes ``assets/agents.md/<name>/`` and prunes the corresponding entry from
 ``mapping.yml``. ``--dry-run`` previews the deletion without touching
 disk or the catalog.
 """
@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--name",
         required=True,
-        help="Name of the integration to remove (matches the agents.md/<name>/ folder).",
+        help="Name of the integration to remove (matches the assets/agents.md/<name>/ folder).",
     )
     parser.add_argument(
         "--dry-run",

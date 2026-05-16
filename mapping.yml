@@ -2,17 +2,17 @@ installed_skills:
 - name: grill-me
   version: 0.1.0
   source_url: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md
-  install_path: skills/grill-me/
+  install_path: assets/skills/grill-me/
 - name: storytelling-mastery-skill
   version: 0.1.0
   source_url: https://github.com/Zzzeen2552/storytelling-mastery-skill
-  install_path: skills/storytelling-mastery-skill/
+  install_path: assets/skills/storytelling-mastery-skill/
 - name: write-a-skill
   version: 0.1.0
   source_url: https://github.com/mattpocock/skills/blob/main/skills/productivity/write-a-skill/SKILL.md
-  install_path: skills/write-a-skill/
+  install_path: assets/skills/write-a-skill/
 installed_agents_md:
 - name: karpathy-guidelines
   version: 0.1.0
   source_url: https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md
-  install_path: agents.md/karpathy-guidelines/
+  install_path: assets/agents.md/karpathy-guidelines/

@@ -88,6 +88,7 @@ pub(crate) fn harness_tag(h: Harness) -> &'static str {
         Harness::ClaudeCode => "claude-code",
         Harness::Codex => "codex",
         Harness::OpenCode => "opencode",
+        Harness::Codebuff => "codebuff",
     }
 }
 
@@ -841,6 +842,7 @@ fn render_header(f: &mut Frame, app: &App, area: Rect) {
         Some(Harness::ClaudeCode) => ("Harness: Claude Code", Style::default().fg(Color::Green)),
         Some(Harness::Codex) => ("Harness: Codex", Style::default().fg(Color::Green)),
         Some(Harness::OpenCode) => ("Harness: OpenCode", Style::default().fg(Color::Green)),
+        Some(Harness::Codebuff) => ("Harness: Codebuff", Style::default().fg(Color::Green)),
         None => ("No harness detected", Style::default().fg(Color::Yellow)),
     };
     let header = Paragraph::new(Span::styled(label, style)).block(
@@ -1415,8 +1417,8 @@ mod tests {
 
     #[test]
     fn build_add_rows_marks_installed_skills_and_agents() {
-        let skills = vec![entry("foo", "0.1.0", "foo desc", &[], "skills/foo")];
-        let agents = vec![entry("bar", "0.2.0", "bar desc", &[], "agents.md/bar")];
+        let skills = vec![entry("foo", "0.1.0", "foo desc", &[], "assets/skills/foo")];
+        let agents = vec![entry("bar", "0.2.0", "bar desc", &[], "assets/agents.md/bar")];
         let state = ProjectState {
             installed_skills: vec![InstalledItem {
                 name: "foo".into(),
@@ -1446,7 +1448,7 @@ mod tests {
             "0.1.0",
             "claude only",
             &["claude-code"],
-            "skills/claude-only",
+            "assets/skills/claude-only",
         )];
         let agents: Vec<CatalogEntry> = vec![];
         let state = ProjectState::default();
@@ -1460,13 +1462,52 @@ mod tests {
 
     #[test]
     fn build_add_rows_empty_compat_is_universal() {
-        let skills = vec![entry("any", "0.1.0", "any harness", &[], "skills/any")];
+        let skills = vec![entry("any", "0.1.0", "any harness", &[], "assets/skills/any")];
         let agents: Vec<CatalogEntry> = vec![];
         let state = ProjectState::default();
-        for h in [Harness::ClaudeCode, Harness::Codex, Harness::OpenCode] {
+        for h in [
+            Harness::ClaudeCode,
+            Harness::Codex,
+            Harness::OpenCode,
+            Harness::Codebuff,
+        ] {
             let rows = build_add_rows(&skills, &agents, &state, Some(h));
             assert!(!rows[0].incompatible, "harness {h:?}");
         }
+    }
+
+    #[test]
+    fn build_add_rows_marks_incompatible_for_codebuff_when_excluded() {
+        let skills = vec![entry(
+            "claude-only",
+            "0.1.0",
+            "claude only",
+            &["claude-code"],
+            "assets/skills/claude-only",
+        )];
+        let agents: Vec<CatalogEntry> = vec![];
+        let state = ProjectState::default();
+
+        let rows_codebuff = build_add_rows(&skills, &agents, &state, Some(Harness::Codebuff));
+        assert!(rows_codebuff[0].incompatible);
+    }
+
+    #[test]
+    fn build_add_rows_codebuff_compatible_entry_not_dimmed() {
+        let skills = vec![entry(
+            "codebuff-only",
+            "0.1.0",
+            "codebuff only",
+            &["codebuff"],
+            "assets/skills/codebuff-only",
+        )];
+        let agents: Vec<CatalogEntry> = vec![];
+        let state = ProjectState::default();
+
+        let rows_codebuff = build_add_rows(&skills, &agents, &state, Some(Harness::Codebuff));
+        assert!(!rows_codebuff[0].incompatible);
+        let rows_claude = build_add_rows(&skills, &agents, &state, Some(Harness::ClaudeCode));
+        assert!(rows_claude[0].incompatible);
     }
 
     #[test]
@@ -1584,6 +1625,7 @@ mod tests {
         assert_eq!(harness_tag(Harness::ClaudeCode), "claude-code");
         assert_eq!(harness_tag(Harness::Codex), "codex");
         assert_eq!(harness_tag(Harness::OpenCode), "opencode");
+        assert_eq!(harness_tag(Harness::Codebuff), "codebuff");
     }
 
     #[test]

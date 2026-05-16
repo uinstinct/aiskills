@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Remove a skill from the registry by name.
 
-Deletes ``skills/<name>/`` and prunes the corresponding entry from
+Deletes ``assets/skills/<name>/`` and prunes the corresponding entry from
 ``mapping.yml``. ``--dry-run`` previews the deletion without touching
 disk or the catalog.
 """
@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--name",
         required=True,
-        help="Name of the skill to remove (must match its folder under skills/).",
+        help="Name of the skill to remove (must match its folder under assets/skills/).",
     )
     parser.add_argument(
         "--dry-run",

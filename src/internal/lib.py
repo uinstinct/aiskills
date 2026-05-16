@@ -28,14 +28,24 @@ from urllib.parse import unquote, urlparse
 import yaml
 
 MAPPING_FILE_NAME = "mapping.yml"
-SKILLS_DIR_NAME = "skills"
-AGENTS_MD_DIR_NAME = "agents.md"
+ASSETS_DIR_NAME = "assets"
+SKILLS_DIR_NAME = f"{ASSETS_DIR_NAME}/skills"
+AGENTS_MD_DIR_NAME = f"{ASSETS_DIR_NAME}/agents.md"
 MANIFEST_FILE_NAME = "manifest.yml"
 
 SKILLS_KEY = "installed_skills"
 AGENTS_MD_KEY = "installed_agents_md"
 
-ALLOWED_HARNESSES = ("claude-code", "codex", "opencode")
+ALLOWED_HARNESSES = ("claude-code", "codex", "opencode", "codebuff")
+
+_SEMVER_RE = re.compile(
+    r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
+
+
+def is_semver(value: str) -> bool:
+    """Return True if ``value`` is a valid SemVer 2.0.0 version string."""
+    return bool(_SEMVER_RE.match(value))
 
 USER_AGENT = "instinctagents-ingest/1"
 GITHUB_API = "https://api.github.com"
@@ -414,6 +424,52 @@ def prompt_text(question: str, default: str | None = None) -> str:
             raise IngestError(f"no value provided for {question!r}")
         return default
     return raw
+
+
+def prompt_multi_choice(prompt: str, options: list[str]) -> list[str]:
+    """Prompt for a subset of ``options`` and return the user's picks.
+
+    Accepts comma-separated 1-based indices (``1,3``), comma-separated
+    labels (``claude-code, codex``), or a mix. Whitespace around tokens
+    is stripped. Empty input (or whitespace-only) returns ``[]`` —
+    callers interpret this as "no selection" (typically "all" in the
+    scaffold flow).
+
+    Invalid input — an unknown label or an out-of-range index — prints
+    an error and re-prompts rather than crashing. Returned picks are
+    deduplicated while preserving the order in which they were entered.
+    """
+    require_tty(prompt)
+    while True:
+        print(prompt, file=sys.stderr)
+        for idx, option in enumerate(options, start=1):
+            print(f"  [{idx}] {option}", file=sys.stderr)
+        raw = input("choices> ").strip()
+        if not raw:
+            return []
+        tokens = [t.strip() for t in raw.split(",") if t.strip()]
+        if not tokens:
+            return []
+        selected: list[str] = []
+        error: str | None = None
+        for token in tokens:
+            if token.isdigit():
+                idx = int(token)
+                if not 1 <= idx <= len(options):
+                    error = f"index out of range: {token}"
+                    break
+                pick = options[idx - 1]
+            elif token in options:
+                pick = token
+            else:
+                error = f"invalid choice: {token!r}"
+                break
+            if pick not in selected:
+                selected.append(pick)
+        if error is not None:
+            print(error, file=sys.stderr)
+            continue
+        return selected
 
 
 # ---------------------------------------------------------------------------

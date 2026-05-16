@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # package-release-assets.sh — produce deterministic release tarballs for every
-# skill under skills/ and every agents.md integration under agents.md/.
+# skill under assets/skills/ and every agents.md integration under assets/agents.md/.
 #
 # Usage:
 #   scripts/package-release-assets.sh           # writes ./dist/*.tar.gz
@@ -51,7 +51,7 @@ read_manifest_field() {
 
 package_entry() {
     # Usage: package_entry <kind> <parent_dir> <name>
-    # kind ∈ {skill, agents-md}; parent_dir is skills/ or agents.md/; name is the folder basename.
+    # kind ∈ {skill, agents-md}; parent_dir is assets/skills/ or assets/agents.md/; name is the folder basename.
     local kind="$1" parent_dir="$2" name="$3"
     local manifest="${parent_dir}/${name}/manifest.yml"
     local version asset out_path
@@ -90,25 +90,25 @@ main() {
     require_cmd gzip
     require_gnu_tar
 
-    [ -d skills ] || err "skills/ directory not found (run from repo root)"
-    [ -d "agents.md" ] || err "agents.md/ directory not found (run from repo root)"
+    [ -d assets/skills ] || err "assets/skills/ directory not found (run from repo root)"
+    [ -d "assets/agents.md" ] || err "assets/agents.md/ directory not found (run from repo root)"
 
     mkdir -p "$OUT_DIR"
     OUT_DIR_ABS="$(cd "$OUT_DIR" && pwd)"
 
     local entry name
     printf 'Packaging skills:\n'
-    for entry in skills/*/; do
+    for entry in assets/skills/*/; do
         [ -d "$entry" ] || continue
         name="$(basename "$entry")"
-        package_entry "skill" "skills" "$name"
+        package_entry "skill" "assets/skills" "$name"
     done
 
     printf 'Packaging agents.md integrations:\n'
-    for entry in agents.md/*/; do
+    for entry in assets/agents.md/*/; do
         [ -d "$entry" ] || continue
         name="$(basename "$entry")"
-        package_entry "agents-md" "agents.md" "$name"
+        package_entry "agents-md" "assets/agents.md" "$name"
     done
 
     printf 'Done. Output: %s/\n' "$OUT_DIR"

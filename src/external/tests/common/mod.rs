@@ -40,6 +40,12 @@ pub fn fake_opencode_project() -> TempDir {
     dir
 }
 
+pub fn fake_codebuff_project() -> TempDir {
+    let dir = TempDir::new().expect("create tempdir for fake codebuff project");
+    fs::create_dir_all(dir.path().join(".agents")).expect("create .agents/");
+    dir
+}
+
 pub struct MockReleases {
     pub server: ServerGuard,
     _mocks: Vec<Mock>,

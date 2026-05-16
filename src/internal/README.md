@@ -51,7 +51,7 @@ skill_add.py [--force] <url>
 
 - `url` (positional, required): GitHub URL — repo root, `/tree/<ref>/<path>`
   folder, or a raw/blob single-file URL.
-- `--force`: overwrite an existing `skills/<name>/` entry without prompting.
+- `--force`: overwrite an existing `assets/skills/<name>/` entry without prompting.
 
 ### `skill_remove.py`
 
@@ -60,7 +60,7 @@ skill_remove.py --name <skill_name> [--dry-run]
 ```
 
 - `--name` (required): name of the skill to remove. Must match the folder
-  basename under `skills/` and the entry name in `mapping.yml`.
+  basename under `assets/skills/` and the entry name in `mapping.yml`.
 - `--dry-run`: print what would be deleted; do not touch disk.
 
 ### `skill_list.py`
@@ -83,7 +83,7 @@ agents_md_add.py [--force] <url>
 - `url` (positional, required): GitHub URL — single-file raw/blob URL
   preferred, or a `/tree/<ref>/<path>` folder containing `snippet.md` and
   `manifest.yml`.
-- `--force`: overwrite an existing `agents.md/<name>/` entry without
+- `--force`: overwrite an existing `assets/agents.md/<name>/` entry without
   prompting.
 
 ### `agents_md_remove.py`

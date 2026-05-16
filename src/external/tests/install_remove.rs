@@ -18,7 +18,10 @@ use instinctagents::installer::{
 };
 use instinctagents::state::ProjectState;
 
-use common::{build_skill_tarball, fake_claude_project, fake_codex_project, fake_opencode_project};
+use common::{
+    build_skill_tarball, fake_claude_project, fake_codebuff_project, fake_codex_project,
+    fake_opencode_project,
+};
 
 const SKILL_NAME: &str = "demo";
 const SKILL_VERSION: &str = "0.1.0";
@@ -123,6 +126,58 @@ fn install_skill_into_fake_opencode_project() {
     assert_eq!(
         state.installed_skills[0].install_path.as_deref(),
         Some(".opencode/skills/demo/")
+    );
+}
+
+#[test]
+fn install_skill_into_fake_codebuff_project() {
+    let project = fake_codebuff_project();
+    assert_eq!(harness::detect(project.path()), Some(Harness::Codebuff));
+
+    install_skill_from_tarball(
+        project.path(),
+        Harness::Codebuff,
+        SKILL_NAME,
+        SKILL_VERSION,
+        SKILL_SOURCE,
+        &skill_tarball(),
+        OverwriteAction::Skip,
+    )
+    .expect("install skill");
+
+    assert!(project.path().join(".agents/skills/demo/SKILL.md").is_file());
+    assert!(!project.path().join(".claude").exists());
+    let state = ProjectState::load(project.path()).unwrap();
+    assert_eq!(
+        state.installed_skills[0].install_path.as_deref(),
+        Some(".agents/skills/demo/")
+    );
+}
+
+#[test]
+fn install_agents_md_into_fake_codebuff_project_preserves_user_content() {
+    let project = fake_codebuff_project();
+    let target = project.path().join("AGENTS.md");
+    let pre_existing = "# Existing Codebuff agents.md\n\nUser prose unaffected.\n";
+    fs::write(&target, pre_existing).unwrap();
+
+    install_agents_md_from_tarball(
+        project.path(),
+        Harness::Codebuff,
+        INTEG_NAME,
+        INTEG_VERSION,
+        INTEG_SOURCE,
+        &agents_md_tarball(),
+    )
+    .expect("install agents.md");
+
+    let after = fs::read_to_string(&target).unwrap();
+    assert!(after.starts_with(pre_existing));
+    assert!(after.contains("<!-- instinctagents:start:integ -->"));
+    assert!(after.contains(INTEG_SNIPPET));
+    assert!(
+        !project.path().join("CLAUDE.md").exists(),
+        "codebuff install must NOT touch CLAUDE.md"
     );
 }
 

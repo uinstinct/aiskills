@@ -1,108 +1,157 @@
-## 2026-05-15 - US-012
-- What was implemented: Added uv prerequisite paragraph to README.md `## For maintainers` section with link to https://docs.astral.sh/uv/getting-started/installation/. Updated `src/internal/README.md` Typecheck section to reflect uv-based CI (replaced outdated `python -m py_compile` instructions with `uv sync --frozen` + `uv run` smoke test). No `pip`, `requirements.txt`, or `python -m venv` references remain in either README.
-- Files changed: `README.md`, `src/internal/README.md`
-- **Learnings for future iterations:**
-  - The old Typecheck section in src/internal/README.md still referenced `python -m py_compile` / "CI (US-028)" — kept from before the uv migration; always check for stale CI documentation when updating CI
-  - Avoid mentioning `pip` even in negations ("no pip needed") in README to stay consistent with acceptance criteria
----
+# Ralph Progress Log
 
-## 2026-05-15 - US-011
-- What was implemented: Updated `.github/workflows/ci.yml` python job to replace `actions/setup-python@v5` + `python -m py_compile` with `astral-sh/setup-uv@v3`, `uv sync --frozen --project src/internal`, and a smoke test via `uv run --project src/internal python src/internal/skill_list.py`. No pip references remain in ci.yml.
-- Files changed: `.github/workflows/ci.yml`
-- **Learnings for future iterations:**
-  - `astral-sh/setup-uv@v3` installs uv on the runner without needing `actions/setup-python` — uv manages Python itself
-  - `uv sync --frozen` will fail if uv.lock is out of sync, catching any lockfile drift in CI
-  - The smoke test (`skill_list.py`) validates both uv can resolve deps and the script runs — more useful than bare py_compile
----
-
-## 2026-05-15 - US-010
-- What was implemented: Updated all six `.opencode/commands/*.md` files to replace `python src/internal/<script>.py $ARGUMENTS` with `uv run --project src/internal python src/internal/<script>.py $ARGUMENTS`. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output. No pip/venv references remain in any OpenCode command file.
-- Files changed: `.opencode/commands/skill-add.md`, `.opencode/commands/skill-list.md`, `.opencode/commands/skill-remove.md`, `.opencode/commands/agents-md-add.md`, `.opencode/commands/agents-md-list.md`, `.opencode/commands/agents-md-remove.md`
-- **Learnings for future iterations:**
-  - OpenCode commands use a single `.md` file per command under `.opencode/commands/`; the `!` shell invocation line is the only place to update
-  - Change is identical in pattern to US-008 and US-009 — just a different directory
----
-
-## 2026-05-15 - US-009
-- What was implemented: Updated all six `.codex/skills/*/SKILL.md` files to replace `python src/internal/<script>.py <ARGUMENTS>` with `uv run --project src/internal python src/internal/<script>.py <ARGUMENTS>`. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output. No pip/venv references remain in any Codex skill file.
-- Files changed: `.codex/skills/skill-add/SKILL.md`, `.codex/skills/skill-list/SKILL.md`, `.codex/skills/skill-remove/SKILL.md`, `.codex/skills/agents-md-add/SKILL.md`, `.codex/skills/agents-md-list/SKILL.md`, `.codex/skills/agents-md-remove/SKILL.md`
-- **Learnings for future iterations:**
-  - Codex skills use a single `SKILL.md` per directory under `.codex/skills/<name>/`; the bash command block is the only place to update
-  - The change is identical in pattern to US-008 (Claude Code commands) — just a different directory
----
-
-## 2026-05-15 - US-008
-- What was implemented: Updated all six `.claude/commands/*.md` files to replace `python src/internal/<script>.py $ARGUMENTS` with `uv run --project src/internal python src/internal/<script>.py $ARGUMENTS`. No frontmatter changes were needed. Smoke-tested via `uv run --project src/internal python src/internal/skill_list.py` which produced correct output.
-- Files changed: `.claude/commands/skill-add.md`, `.claude/commands/skill-list.md`, `.claude/commands/skill-remove.md`, `.claude/commands/agents-md-add.md`, `.claude/commands/agents-md-list.md`, `.claude/commands/agents-md-remove.md`
-- **Learnings for future iterations:**
-  - `uv run --project src/internal` resolves the project from repo root without needing a prior `uv sync` step
-  - No `allowed-tools` changes needed — `Bash` was already listed and `uv run` is just a different invocation of the same bash command
----
-
-## 2026-05-15 - US-007
-- What was implemented: Added uv version note (≥ 0.8.19) to `src/internal/README.md` Setup section. The `uv.lock` file was already committed in the US-006 commit; US-007 verified: lockfile exists, `uv sync --frozen --project src/internal` passes, `.gitignore` does not exclude `uv.lock`, and README now documents the minimum uv version.
-- Files changed: `src/internal/README.md`
-- **Learnings for future iterations:**
-  - `uv sync --frozen` fails if `uv.lock` is out of sync with `pyproject.toml`; running `uv sync` (without `--frozen`) regenerates it
-  - The uv version note goes in the Setup section of README, right before the `uv sync` command, not in a separate section
----
-
-## 2026-05-15 - US-006
-- What was implemented: Created `src/internal/pyproject.toml` with name `instinctagents-internal`, requires-python `>=3.10`, and dependency `pyyaml>=6.0`. Deleted `src/internal/requirements.txt`. Updated `src/internal/README.md` to replace `pip install -r` with `uv sync --project src/internal` (and note on `uv run` as an alternative). Also committed the auto-generated `uv.lock` as a byproduct of `uv sync`.
-- Files changed: `src/internal/pyproject.toml` (new), `src/internal/uv.lock` (new), `src/internal/requirements.txt` (deleted), `src/internal/README.md`
-- **Learnings for future iterations:**
-  - `uv sync --project src/internal` from repo root creates `.venv` inside `src/internal/` and installs deps
-  - `uv run --project src/internal python -c "..."` works without a prior sync step — uv installs on demand
-  - uv.lock is generated automatically by `uv sync`; it was included in the US-006 commit; US-007 verifies remaining lockfile criteria (frozen sync, gitignore, version note)
-  - uv version used: 0.8.19
----
-
-## 2026-05-15 - US-005
-- What was implemented: Updated README.md `## Install` section to add supported platform list (macOS arm64, macOS x86_64, Linux x86_64) and a Gatekeeper bypass note for macOS users (right-click → Open or `xattr -d com.apple.quarantine`). One-liner install command unchanged.
-- Files changed: `README.md`
-- **Learnings for future iterations:**
-  - README had no explicit mention of supported platforms; adding a `**Supported platforms:**` line right after the one-liner is the natural place
-  - Gatekeeper note goes in a blockquote immediately after the platform list for scannability
----
-
-## 2026-05-15 - US-004
-- What was implemented: Created `scripts/test-install.sh` that stubs `uname` and `curl` via a prepended PATH directory with fake binaries. Tests 5 cases: Linux+x86_64 (→ linux-x86_64, exit 0), Darwin+arm64 (→ macos-arm64, exit 0), Darwin+x86_64 (→ macos-x86_64, exit 0), Linux+aarch64 (exit non-zero, stderr has error:+OS+arch), Darwin+i386 (exit non-zero, stderr has error:+OS+arch). Added `scripts/test-install.sh` to shellcheck command and added new CI step in `.github/workflows/ci.yml`.
-- Files changed: `scripts/test-install.sh` (new), `.github/workflows/ci.yml`
-- **Learnings for future iterations:**
-  - Stub uname/curl via a temp dir prepended to PATH — fake binaries read FAKE_OS, FAKE_ARCH, CURL_LOG from env vars set on the bash invocation
-  - Fake curl: parse `-o <dest>` with a skip_next flag; API calls (no -o) print fake JSON, download calls write dummy file and log URL to CURL_LOG
-  - Run each test from a per-test temp subdirectory so `./instinctagents` (DEST) doesn't pollute the repo root
-  - Use `grep -qE "/${expected_asset}$"` to anchor the URL assertion at the end (not just substring match)
-  - Use `local foo; foo=...` (separate declaration + assignment) to avoid SC2155; function-scoped PASS/FAIL mutations work fine since bash functions are not subshells
----
-
-## 2026-05-15 - US-003
-- What was implemented: Updated install.sh to auto-detect OS and architecture. Removed top-level `ASSET` constant; `check_platform` now computes the asset name via a `case "${os}/${arch}"` statement and prints it for capture. Added Darwin/arm64, Darwin/aarch64, Darwin/x86_64, Darwin/amd64 cases. Updated `download_asset` to accept `asset` as a second parameter. Error messages now include both OS and arch values.
-- Files changed: `install.sh`
-- **Learnings for future iterations:**
-  - `case "${os}/${arch}"` pattern is clean for combined OS+arch dispatch in bash
-  - Separate `local asset tag` declaration from assignment (e.g., `asset="$(check_platform)"`) avoids SC2155 shellcheck warning about masking return values
-  - Error message format `error: unsupported platform: os=${os} arch=${arch}` satisfies the requirement that stderr contains `error:` plus both detected values (needed by US-004 tests)
----
+Each iteration appends one entry below describing what was implemented, files changed, and learnings.
 
 ## Codebase Patterns
-- Workspace Cargo.toml at root includes `src/external`; `cargo build` runs from root and outputs to `target/` at root level (not `src/external/target/`)
-- Release workflow uses separate build jobs that upload artifacts, then a final `release` job downloads and publishes
+- `src/internal/` scripts import helpers from `lib` directly (`from lib import repo_root, ...`). This creates a local module binding — patching `lib.repo_root` does NOT affect the calling script's binding. Tests that need to redirect `repo_root` (e.g. to a tempdir) MUST patch BOTH `lib.repo_root` AND `<script>.repo_root`. Functions defined inside `lib.py` that internally call `repo_root()` are fine with a single `lib.repo_root` patch because they resolve from their own module namespace.
+- `ALLOWED_HARNESSES` in `src/internal/lib.py` is now `("claude-code", "codex", "opencode", "codebuff")` — keep in sync with `ALLOWED_HARNESS_COMPATIBILITY` in `src/external/src/manifest_validation.rs` whenever a new harness is added.
+- `is_semver(value: str) -> bool` lives in `lib.py` for any scaffold flow that needs to validate a user-supplied version string. Pattern: prompt loop that re-prompts on `not is_semver(value)`.
+- The `Harness` enum is matched exhaustively in three places besides `harness.rs` itself: `cli.rs::is_compatible` (tag mapping), `tui.rs::harness_tag` (tag mapping), and `tui.rs::render_header` (status-area label). When adding a new harness variant, ALL FOUR sites must be updated together or `cargo build` fails. The registry-side tag string (`"claude-code"`, `"codex"`, `"opencode"`, `"codebuff"`) must match what manifests use for `harness_compatibility`.
+- The build-time manifest `harness_compatibility` allow-list lives in `src/external/src/manifest_validation.rs` (`ALLOWED_HARNESS_COMPATIBILITY`, `is_allowed_harness`). `build.rs` consumes it via `include!("src/manifest_validation.rs")` inside a `mod manifest_validation { ... }` wrapper; `lib.rs` exposes the same file as `pub mod manifest_validation`. When adding a new harness tag (e.g. a fifth one), add it to that single constant — both the build-time validator and the catalog.rs parse test pick it up automatically. Inner doc comments (`//!`) are illegal at the top of files consumed via `include!`; use `//` instead.
+- Registry content lives at `assets/skills/` and `assets/agents.md/` (moved from top-level in US-001). Code that previously hard-coded `skills/` or `agents.md/` paths needs to be updated everywhere — `src/external/build.rs`, `src/internal/lib.py`, and `scripts/package-release-assets.sh` all reference these directories.
+- Path helpers in `src/internal/lib.py`: `ASSETS_DIR_NAME = "assets"`, `SKILLS_DIR_NAME = "assets/skills"`, `AGENTS_MD_DIR_NAME = "assets/agents.md"`. The two-segment values flow through `pathlib.Path` operators fine (`root / SKILLS_DIR_NAME / name` -> `root/assets/skills/name`). All ingest/remove scripts under `src/internal/` go through `entry_dir(kind, name)` and `install_path_for(kind, name)` — never hard-code path literals.
+- `build.rs` resolves the repo root by walking up two parents from `CARGO_MANIFEST_DIR` (`src/external`), so it scans `assets/skills/` from there, not relative to the crate.
+- The `build.rs` invariant `manifest.name == parent folder basename` still holds after the assets/ move — only the prefix changed.
+- Test fixtures in `src/external/src/tui.rs` use literal install_path strings (e.g. `"assets/skills/foo"`); these are arbitrary test data, not on-disk paths, but should still match the canonical layout to keep the grep-clean property.
+- The PRD intentionally splits the move (US-001) from the build.rs update (US-002); `cargo build` is broken at the US-001 commit and restored at US-002.
 
-## 2026-05-15 - US-002
-- What was implemented: Added `build-macos-x86_64` job to `.github/workflows/release.yml` that cross-compiles for `x86_64-apple-darwin` on the `macos-14` (Apple Silicon) runner. Added `dist/instinctagents-macos-x86_64` to the release `files:` list. Updated `release` job `needs` to include all three build jobs.
-- Files changed: `.github/workflows/release.yml`
+## 2026-05-16 - US-010
+- Updated README.md for the Codebuff harness and the two new scaffold commands.
+  - Header line: "Supports the **Claude Code**, **Codex**, **OpenCode**, and **Codebuff** harnesses."
+  - Usage paragraph: "Run the binary inside any project that uses Claude Code, Codex, OpenCode, or Codebuff."
+  - Harness-detection paragraph appended a sentence: Codebuff is matched **last**, via `.agents/` directory or `knowledge.md` file, and never shadows the higher-priority signals.
+  - `## For maintainers` section split into two flows: an ingest block (`/skill-add`, `/agents-md-add`) and a scaffold block (`/skill-new`, `/agents-md-new`), each with a one-line description.
+- Repository-layout tree already showed `assets/skills/` and `assets/agents.md/` from US-001 — no change needed.
+- No top-level CHANGELOG / release-notes file exists at the repo root (`ls` and `Glob CHANGELOG*` both empty), so the optional bullet was skipped per the AC.
+- Grep confirmed no remaining `^skills/`, `^agents\.md/`, ``` `skills/ ```, ``` `agents.md/ ```, `"skills/`, or `"agents.md/"` matches in README.md.
+- `cargo build` clean (no Rust changes; doc-only commit). README is the sole file touched.
+- Files changed: `README.md`.
 - **Learnings for future iterations:**
-  - Rust cross-compilation from arm64 macOS to x86_64 macOS is supported natively; no extra toolchain beyond `rustup target add x86_64-apple-darwin` is needed
-  - `strip` on macOS works on cross-compiled x86_64 binaries while running on arm64 — no cross-strip needed
-  - Documented approach choice (cross-compile vs separate runner) via YAML comment as required by the PRD
+  - All ten user stories in `prd.json` now have `passes: true`. After committing this story and the PRD update, the Ralph stop condition fires — return `<promise>COMPLETE</promise>`.
+  - The README's harness list is the user-visible source of truth for "supported harnesses." When a fifth harness is added, four spots need to change in the README: header line (line 8), usage paragraph (line 27), harness-detection sentence (line 40), and the maintainer-section examples if any new slash commands are added. The exhaustive-match Rust sites (per the existing Codebase Patterns entry) are separate from this docs sweep.
+  - The "Codebuff matched LAST" wording mirrors the priority order baked into `harness.rs::detect()`; if a future story reorders priorities, both the code and this README sentence need to update.
 ---
 
-## 2026-05-15 - US-001
-- What was implemented: Split the single `release` job into `build-linux-x86_64`, `build-macos-arm64`, and `release` jobs. The macOS arm64 job runs on `macos-14`, installs Rust with `aarch64-apple-darwin` target, builds, strips, and uploads artifact. The final `release` job downloads all artifacts and publishes via softprops/action-gh-release.
-- Files changed: `.github/workflows/release.yml`
+## 2026-05-16 - US-009
+- Added `src/internal/agents_md_new.py` — interactive scaffold for a local-only agents.md integration. Single positional `<name>` + `--force`. Mirrors `skill_new.py` exactly: sanitizes the name, collision-checks `mapping.yml` + `assets/agents.md/<name>/`, then prompts for description (re-prompts on empty), version (default `0.1.0`, re-prompts on invalid semver via `is_semver`), and harness_compatibility (multi-select via `prompt_multi_choice` over the four `ALLOWED_HARNESSES`). Writes `snippet.md` (`# <name>\n\nTODO: describe the integration`) and a `manifest.yml` with `snippet_file: snippet.md` (the agents.md analogue of `entrypoint: SKILL.md`). Upserts a `source_url: local` row in `mapping.yml` via `upsert_catalog_entry("agents-md", ...)`. Non-TTY rejected up-front.
+- Slash-command wrappers: `.claude/commands/agents-md-new.md`, `.codex/skills/agents-md-new/SKILL.md`, `.opencode/commands/agents-md-new.md`, all delegating to `uv run --project src/internal python src/internal/agents_md_new.py $ARGUMENTS`. Each documents the prompts and the non-TTY failure mode.
+- New `src/internal/test_agents_md_new.py` with 8 unittest cases (exact mirror of `test_skill_new.py` topology): creates entry with all fields, default version on empty input, invalid semver re-prompts, empty description re-prompts, name sanitization, collision raises without `--force`, `--force` overwrites, non-TTY fails fast. Patches BOTH `lib.repo_root` AND `agents_md_new.repo_root` per the established pattern.
+- `uvx ruff check src/internal/` clean. `uv run ... python -m unittest discover -s src/internal -p "test_*.py"` 27/27 pass (8 new). `cargo build` + `cargo test` (154 unit + 22 integration) clean.
+- Files changed: `src/internal/agents_md_new.py` (new), `src/internal/test_agents_md_new.py` (new), `.claude/commands/agents-md-new.md` (new), `.codex/skills/agents-md-new/SKILL.md` (new), `.opencode/commands/agents-md-new.md` (new).
 - **Learnings for future iterations:**
-  - Cargo workspace root is at repo root; binaries land in `target/<triple>/release/` relative to repo root
-  - For multi-platform releases, use upload-artifact/download-artifact pattern with `merge-multiple: true` to collect binaries in a single publish job
-  - `macos-14` GitHub runner is Apple Silicon (arm64), suitable for native `aarch64-apple-darwin` builds
+  - The agents.md manifest convention uses `snippet_file: snippet.md` where skills use `entrypoint: SKILL.md` — see `assets/agents.md/karpathy-guidelines/manifest.yml`. Any future scaffold/ingest code that writes a fresh agents.md manifest should emit `snippet_file`, not `entrypoint`.
+  - `skill_new.py` and `agents_md_new.py` are now near-identical in shape (collision check → description → version → multi-choice → write files → mapping upsert). If a third scaffold variant is ever needed, the shared logic could be lifted into a `lib.scaffold_entry(kind, ...)` helper. Not worth refactoring yet — only two callers — but if a third arrives, the duplication should be collapsed.
+  - The test pattern of `_seed_repo(root)` + dual-patching `lib.repo_root` and `<script>.repo_root` is now used by both scaffold tests. Future scaffold tests should copy this verbatim — the `_seed_repo` helper writes an empty `mapping.yml` with both `installed_skills: []` and `installed_agents_md: []` keys, plus both `assets/skills/` and `assets/agents.md/` dirs, so the same helper covers both kinds.
+  - US-010 needs to update README.md to mention `/skill-new` and `/agents-md-new`. The README's existing maintainer section documents `/skill-add` and `/agents-md-add` as the only scaffold-adjacent commands; the four total need to be presented as two ingest commands + two scaffold commands.
+---
+
+## 2026-05-16 - US-008
+- Added `src/internal/skill_new.py` — interactive scaffold for a local-only skill entry. Single positional `<name>` + `--force`. Sanitizes the name via the existing `sanitize_name`, collision-checks against `mapping.yml` + `assets/skills/<name>/`, then prompts for description (required, re-prompts on empty), version (default `0.1.0`, re-prompts on invalid semver), and harness_compatibility (multi-select via `prompt_multi_choice` over the four `ALLOWED_HARNESSES`). Writes `SKILL.md` (`# <name>\n\nTODO: describe the skill`) and `manifest.yml` with `entrypoint: SKILL.md`, then upserts a `source_url: local` row in `mapping.yml`. Non-TTY is rejected up-front with a clear error before any prompts run.
+- Added `codebuff` to `ALLOWED_HARNESSES` (was 3-tuple, now 4-tuple) and added `is_semver(value: str) -> bool` helper to `lib.py` (regex check for `MAJOR.MINOR.PATCH[-pre][+build]`).
+- Slash-command wrappers: `.claude/commands/skill-new.md`, `.codex/skills/skill-new/SKILL.md`, `.opencode/commands/skill-new.md`, all delegating to `uv run --project src/internal python src/internal/skill_new.py $ARGUMENTS`. Each documents the prompts and notes the non-TTY failure mode.
+- New `src/internal/test_skill_new.py` with 8 unittest cases: creates skill with all fields (including manifest YAML keys + mapping row), default version on empty input, invalid semver re-prompts, empty description re-prompts, name sanitization, collision raises without `--force`, `--force` overwrites, and non-TTY fails fast. Uses setUp/tearDown to manage a `TemporaryDirectory` and patches BOTH `lib.repo_root` AND `skill_new.repo_root` because `from lib import repo_root` binds locally in skill_new.
+- `uvx ruff check src/internal/` clean. `uv run ... python -m unittest discover -s src/internal -p "test_*.py"` 19/19 pass. `cargo build` + `cargo test` + `cargo clippy --all-targets -- -D warnings` all clean.
+- Files changed: `src/internal/lib.py` (ALLOWED_HARNESSES expansion + is_semver), `src/internal/skill_new.py` (new), `src/internal/test_skill_new.py` (new), `.claude/commands/skill-new.md` (new), `.codex/skills/skill-new/SKILL.md` (new), `.opencode/commands/skill-new.md` (new).
+- **Learnings for future iterations:**
+  - The `from lib import X` pattern used everywhere under `src/internal/` means tests that mock `lib.X` for one script will silently miss mocks for OTHER scripts that imported `X` directly. When introducing US-009's `agents_md_new.py` tests, patch BOTH `lib.repo_root` AND `agents_md_new.repo_root`. Same goes for any other helper that gets re-bound locally.
+  - `tempfile.TemporaryDirectory()` as a context manager inside the helper that runs the script will clean up the dir BEFORE the test asserts on disk contents. Use setUp/tearDown (`self._tmp = TemporaryDirectory(); self._tmp.cleanup()`) so the dir lives until tearDown runs.
+  - `prompt_text` raises `IngestError` on empty input when no default is set. Code that needs "required, non-empty, re-prompt on empty" must wrap the call in a `try/except IngestError: continue` loop — see `_prompt_description` in skill_new.py for the canonical pattern.
+  - The scaffold writes manifest fields directly with `write_manifest` rather than going through `scaffold_skill_manifest`. The latter's prompt branches and frontmatter-parsing aren't useful here because skill-new always has fresh data and no existing markdown to read from. US-009 should follow the same approach.
+  - `prompt_multi_choice` returns `[]` on empty input, which maps to "all harnesses" in the manifest (the catalog/installer treats empty `harness_compatibility` as universal compatibility — see install_remove tests).
+---
+
+## 2026-05-16 - US-007
+- Added `prompt_multi_choice(prompt: str, options: list[str]) -> list[str]` to `src/internal/lib.py`. Mirrors the existing `prompt_choice` I/O pattern (numbered options printed to stderr, input read via `input()`), gated by `require_tty()` so non-TTY contexts raise `IngestError` instead of hanging. Parsing: comma-split, whitespace-stripped tokens; each token is either a 1-based index or an exact label match; mixing is allowed; duplicates are dropped while preserving first-seen order; empty/whitespace-only input returns `[]`; invalid input prints the offending token and re-prompts.
+- New test file `src/internal/test_lib.py` with 11 `unittest` cases covering all four AC scenarios plus extras (whitespace-only, mixed indices+labels, dedupe, out-of-range index, non-TTY raises). Run with `uv run --project src/internal python -m unittest discover -s src/internal -p "test_*.py"` from the repo root — 11/11 pass.
+- `uvx ruff check src/internal/` clean. `cargo build` clean (no Rust changes; verified the Python addition didn't touch shared paths).
+- Files changed: `src/internal/lib.py`, `src/internal/test_lib.py` (new).
+- **Learnings for future iterations:**
+  - `src/internal/` now has a unit-test convention: top-level `test_<module>.py` files using stdlib `unittest`, importable via `import lib` because `unittest discover` puts the start-dir on `sys.path`. No pytest dep needed — keep it dependency-free unless a future story demands fixtures. Future scaffold scripts (US-008/US-009) should add tests next to `test_lib.py` following the same pattern.
+  - The TTY-gated prompt helpers are testable by patching `sys.stdin.isatty` + `builtins.input` together: `patch.object(sys.stdin, "isatty", return_value=True)` enables the prompt, then `patch("builtins.input", side_effect=lambda *_: next(iterator))` feeds successive responses to test the re-prompt loop. The `*_` lambda swallows the prompt-string argument that `input()` passes.
+  - `ALLOWED_HARNESSES` in lib.py still lists only the three pre-Codebuff harnesses. `prompt_multi_choice` is options-agnostic (it just takes `list[str]`), so callers can pass whatever subset they want. US-008/US-009 will need to either extend `ALLOWED_HARNESSES` to include `"codebuff"` OR pass the four-element list directly to `prompt_multi_choice` and skip the lib-side validation. The cleaner fix is extending the constant — `scaffold_agents_md_manifest` already validates against it (line 573-578).
+---
+
+## 2026-05-16 - US-006
+- Verified `installer.rs` already routes through `harness.target_folder()` and `harness.agents_md_file()` exclusively — no Codebuff-specific branching needed (method dispatch was the design from earlier stories; US-004 added the Codebuff arm to the enum methods).
+- Broadened existing compatibility tests in `src/external/src/cli.rs` to cover Codebuff: `is_compatible_empty_list_is_universal`, `check_compat_universal_entry_passes_without_force`, and `is_compatible_respects_allow_list` all now assert against `Harness::Codebuff`. Added two new tests: `check_compat_force_bypasses_for_codebuff_incompatible_entry` (proves `--force` allows installing a non-Codebuff entry into a Codebuff project) and `is_compatible_recognizes_codebuff_tag`.
+- Broadened TUI tests in `src/external/src/tui.rs`: `harness_tag_mapping` now asserts `Harness::Codebuff -> "codebuff"`; `build_add_rows_empty_compat_is_universal` iterates over all four harnesses. Added `build_add_rows_marks_incompatible_for_codebuff_when_excluded` and `build_add_rows_codebuff_compatible_entry_not_dimmed`.
+- Added integration coverage: `tests/common/mod.rs` gained `fake_codebuff_project()` (creates a `TempDir` with only `.agents/`); `tests/install_remove.rs` gained `install_skill_into_fake_codebuff_project` (verifies skill lands at `.agents/skills/demo/SKILL.md` and `.instinctagents` records `.agents/skills/demo/`) and `install_agents_md_into_fake_codebuff_project_preserves_user_content` (verifies AGENTS.md injection preserves user prose byte-for-byte and does not touch CLAUDE.md).
+- Manual smoke test (in a tempdir containing only `.agents/`): `instinctagents --non-interactive --verbose add --name storytelling-mastery-skill` reached the network-fetch step instead of failing with `NoHarness` — confirming end-to-end Codebuff detection through the release binary. (The actual download failed because the sandbox has no network and there is no v0.1.0 release; the integration test above covers the on-disk install path with an in-memory tarball.)
+- `cargo build` clean, `cargo test`: 154 unit + 28 integration (12 in install_remove, 6 in update_check, 4 in tui_resilience, 2 in tui_exit, etc) tests pass (added 4 unit + 2 integration). `cargo clippy --all-targets -- -D warnings` clean.
+- Files changed: `src/external/src/cli.rs`, `src/external/src/tui.rs`, `src/external/tests/common/mod.rs`, `src/external/tests/install_remove.rs`.
+- **Learnings for future iterations:**
+  - The installer was already harness-agnostic by design: `install_skill_from_tarball` and `install_agents_md_snippet` call `harness.target_folder()` and `harness.agents_md_file()` directly, with no per-harness `match` arms in `installer.rs`. The four exhaustive-match sites flagged in the Codebase Patterns section (`harness.rs` enum methods, `cli.rs::is_compatible`, `tui.rs::harness_tag`, `tui.rs::render_header`) are the only places the new variant has to be threaded through.
+  - The `cli.rs add` command path downloads from a hard-coded GitHub Releases URL composed from `REGISTRY_TAG = "v" + CARGO_PKG_VERSION`. CLI-driven manual smoke tests that exercise the install path therefore need either (a) a live release for the current crate version, or (b) the mockito-backed integration test pattern (see `tests/common/mock_github_releases`). The bare-binary smoke test only validates harness detection + URL composition, not the on-disk install — that's what the integration test covers.
+  - When extending `fake_*_project` test helpers, `fake_codebuff_project` does NOT seed an AGENTS.md (Codebuff's instruction file is AGENTS.md too, but the harness signal is `.agents/`). Tests that need pre-existing content must write AGENTS.md themselves, matching the OpenCode test pattern.
+---
+
+## 2026-05-16 - US-005
+- Added `codebuff` as the fourth accepted `harness_compatibility` value in build-time manifest validation.
+- Extracted the allow-list into a shared module `src/external/src/manifest_validation.rs` exposing `ALLOWED_HARNESS_COMPATIBILITY: &[&str]` and `is_allowed_harness(&str) -> bool`. `build.rs` consumes it via `include!("src/manifest_validation.rs")` inside a local `mod manifest_validation` so the same allow-list governs both the build-time panic-on-invalid path and runtime unit tests.
+- Updated the build.rs panic message to interpolate `ALLOWED_HARNESS_COMPATIBILITY.join(", ")` instead of a hard-coded literal, so adding a fifth harness in the future only requires editing one place.
+- Added unit tests in `manifest_validation.rs` (`accepts_all_four_harness_tags`, `rejects_unknown_harness_tags`) and in `catalog.rs` (`manifest_with_codebuff_harness_parses_and_validates`) — the latter parses a real manifest YAML via serde_yaml and asserts the validator accepts `codebuff`. Added `serde_yaml = "0.9"` as a dev-dependency (it was already a build-dependency).
+- Updated `docs/manifest-schema.md`: table cell, allowed-values bullet list, validation rule wording ("four" instead of "three"), plus a new "skill that targets Codebuff specifically" example block.
+- `cargo build` clean. `cargo test`: 150 unit tests + 22 integration tests pass (3 new unit tests added vs US-004's 147). `cargo clippy --all-targets -- -D warnings` clean.
+- Files changed: `src/external/build.rs`, `src/external/Cargo.toml`, `src/external/src/lib.rs`, `src/external/src/catalog.rs`, `src/external/src/manifest_validation.rs` (new), `docs/manifest-schema.md`.
+- **Learnings for future iterations:**
+  - `include!()` inside build.rs can pull a file from `src/` so build-script and library can share constants without a separate crate. Caveat: inner doc comments (`//!`) at the top of the included file break compilation because `include!` splices the content into the calling scope where module-level inner-docs aren't valid. Use regular `//` comments or outer `///` docs in shared-via-include files.
+  - The compiled `#[cfg(test)] mod tests` inside the included file is harmless — `cfg(test)` is false when build.rs is compiled, so the test module is excluded there but still runs through `cargo test` when the file is also loaded as a normal `pub mod` from `lib.rs`.
+  - `serde_yaml` is now BOTH a build-dependency and a dev-dependency. Cargo handles this fine; the dev-dep is needed because catalog.rs's parse test runs at `cargo test` time, not at build time.
+  - Future harness additions need only: (1) extend `ALLOWED_HARNESS_COMPATIBILITY` in `manifest_validation.rs`, (2) add the Harness enum arm + the four exhaustive-match sites called out in the Codebase Patterns section, (3) update `docs/manifest-schema.md`.
+---
+
+## 2026-05-16 - US-004
+- Added `Harness::Codebuff` variant in `src/external/src/harness.rs`. `target_folder()` returns `.agents/skills/`, `agents_md_file()` returns `AGENTS.md`.
+- Extended `detect()` with a new last-priority branch (after ClaudeCode → Codex → OpenCode) that matches a `.agents/` directory OR a `knowledge.md` file at the project root.
+- Updated the three exhaustive matches outside `harness.rs` to include the new variant: `src/external/src/cli.rs::is_compatible` (tag `"codebuff"`), `src/external/src/tui.rs::harness_tag` (tag `"codebuff"`), and `src/external/src/tui.rs::render_header` (label `"Harness: Codebuff"`).
+- New unit tests in `harness.rs`: `detects_codebuff_via_agents_dir`, `detects_codebuff_via_knowledge_md`, `priority_claude_beats_codebuff`, `priority_codex_beats_codebuff`. Existing `target_folder_paths` and `agents_md_file_names` tests gained Codebuff assertions.
+- `cargo test`: 147 unit + 22 integration tests pass. `cargo clippy --all-targets -- -D warnings` clean.
+- Files changed: `src/external/src/harness.rs`, `src/external/src/cli.rs`, `src/external/src/tui.rs`.
+- **Learnings for future iterations:**
+  - Adding a `Harness` enum variant breaks `cargo build` in three other files until the matches are extended. Search for `Harness::OpenCode` and add a sibling arm wherever an exhaustive match shows up — `cli.rs::is_compatible`, `tui.rs::harness_tag`, `tui.rs::render_header`. The installer uses method dispatch (`harness.target_folder()`), so it does NOT need a new arm.
+  - The Codebuff priority is LAST per the PRD because `.agents/` is a directory name that could plausibly coexist with other harness signals — putting it last preserves the existing priority order's correctness.
+  - The registry-side tag `"codebuff"` is the value manifests will use in `harness_compatibility`. US-005 will validate it in `build.rs`; US-006 will exercise it through the installer and TUI compat filter.
+---
+
+## 2026-05-16 - US-003
+- Centralized the assets/ prefix in `src/internal/lib.py`. Added `ASSETS_DIR_NAME = "assets"` and changed `SKILLS_DIR_NAME` / `AGENTS_MD_DIR_NAME` to `"assets/skills"` / `"assets/agents.md"`. The `entry_dir(kind, name)` and `install_path_for(kind, name)` helpers now automatically return `assets/...`-prefixed paths.
+- Updated docstrings and `--help` strings in `skill_add.py`, `agents_md_add.py`, `skill_remove.py`, `agents_md_remove.py`, and `src/internal/README.md` to reference the new `assets/...` paths.
+- Removed a pre-existing unused `prompt_text` import in `skill_add.py` so `ruff check src/internal/` passes cleanly.
+- Smoke tests:
+  - `uv run --project src/internal python src/internal/skill_list.py --json` reports `install_path: assets/skills/<name>/` for grill-me / storytelling-mastery-skill / write-a-skill.
+  - `agents_md_list.py --json` reports `install_path: assets/agents.md/karpathy-guidelines/`.
+  - Created a temp `ralph-test-entry` under both `assets/skills/` and `assets/agents.md/` via the lib helpers, then ran `skill_remove --name ralph-test-entry` and `agents_md_remove --name ralph-test-entry`; both deleted the on-disk folders and pruned `mapping.yml`.
+- `cargo build` + `cargo test` both pass (unchanged: 2 unit + 0 integration tests in the smoke run; full suite verified in US-002).
+- Files changed: `src/internal/lib.py`, `src/internal/skill_add.py`, `src/internal/agents_md_add.py`, `src/internal/skill_remove.py`, `src/internal/agents_md_remove.py`, `src/internal/README.md`.
+- **Learnings for future iterations:**
+  - The `entry_dir` / `install_path_for` helpers in `lib.py` are now the single source of truth for registry paths under `src/internal/`. Future scaffold commands (US-008 / US-009) MUST go through them — don't write `f"assets/skills/{name}"` literals.
+  - `pathlib.Path` accepts multi-segment strings (`Path("assets/skills") / "foo"` -> `assets/skills/foo`); no need to split `ASSETS_DIR_NAME` and `SKILLS_DIR_NAME` apart.
+  - There's no ruff config or test runner pinned for `src/internal/` (no `ruff.toml`, no `tests/` folder, only a `pyproject.toml` with the runtime dep). The pre-existing `prompt_text` unused import means earlier work didn't run ruff; future stories that add code here should `uvx ruff check src/internal/` before committing.
+  - `uv run` resolves the script path relative to the project root, not the cwd, so always invoke as `uv run --project src/internal python src/internal/<script>.py` from the repo root.
+---
+
+## 2026-05-16 - US-002
+- Updated `src/external/build.rs` to scan `assets/skills/` and `assets/agents.md/` instead of the old top-level paths. The `scan_dir` label parameter now carries the full prefix (`assets/skills` / `assets/agents.md`), which flows through to both the cargo rerun-if-changed directive (`dir.display()`) and the panic messages on missing/malformed manifests (`manifest_path.display()`).
+- Mirrored the prefix change in `render_section` so the generated `CatalogEntry::source_path` values now read `assets/skills/<folder>` and `assets/agents.md/<folder>`.
+- Updated the doc-comment in `src/external/src/catalog.rs` to match the new paths.
+- `cargo build` (clean) and `cargo test` both pass: 143 unit tests + 22 integration tests, zero failures.
+- Files changed: `src/external/build.rs`, `src/external/src/catalog.rs`.
+- **Learnings for future iterations:**
+  - `build.rs` uses the `label` argument for two purposes: as the directory path under `repo_root` (`scan_dir`) AND as the prefix for `CatalogEntry::source_path` (`render_section`). Both call sites must be updated together when the layout changes — only updating `scan_dir` would have left stale `skills/foo` source_paths embedded in the binary.
+  - The catalog test (`catalog_sections_are_non_empty`) only asserts non-empty, so it doesn't pin source_path strings — but if future stories add stricter assertions, they should target the `assets/...` prefix.
+  - No test fixtures hard-code `skills/` or `agents.md/` as registry paths; the only literals were already updated in US-001 (`src/external/src/tui.rs` uses `"assets/skills/foo"`).
+---
+
+## 2026-05-16 - US-001
+- Moved `skills/` -> `assets/skills/` and `agents.md/` -> `assets/agents.md/` via `git mv` so history is preserved for all four entries (grill-me, storytelling-mastery-skill, write-a-skill, karpathy-guidelines).
+- Rewrote every `install_path` in `mapping.yml` to the new `assets/...` prefix.
+- Updated `docs/manifest-schema.md` and `docs/mapping-schema.md` example paths and prose to the new prefix; left the schema-of-paths constraint pointing at `assets/skills/<name>/` / `assets/agents.md/<name>/`.
+- Updated `README.md` Repository layout tree to show `assets/skills/` and `assets/agents.md/`.
+- Updated `scripts/package-release-assets.sh` to scan the new parent directories.
+- Updated test-fixture install_path strings in `src/external/src/tui.rs` so the acceptance grep is clean.
+- Files changed: `mapping.yml`, `README.md`, `docs/manifest-schema.md`, `docs/mapping-schema.md`, `scripts/package-release-assets.sh`, `src/external/src/tui.rs`, plus the renamed files under `assets/`.
+- **Learnings for future iterations:**
+  - The PRD's grep AC exempts `archive/`, `target/`, `.git/`, and `assets/` — the remaining matches in `prd.json` and `tasks/prd-assets-scaffold-codebuff.md` are literal copies of the grep pattern itself (PRD self-reference) and count as "intentional documentation history."
+  - `cargo build` is expected to fail at this commit; US-002 fixes `src/external/build.rs` to scan the new paths and restores the build.
+  - Use `git mv` and let Git's rename detection track history; don't `rm -rf` and re-create files.
 ---
