@@ -1465,10 +1465,49 @@ mod tests {
         let skills = vec![entry("any", "0.1.0", "any harness", &[], "assets/skills/any")];
         let agents: Vec<CatalogEntry> = vec![];
         let state = ProjectState::default();
-        for h in [Harness::ClaudeCode, Harness::Codex, Harness::OpenCode] {
+        for h in [
+            Harness::ClaudeCode,
+            Harness::Codex,
+            Harness::OpenCode,
+            Harness::Codebuff,
+        ] {
             let rows = build_add_rows(&skills, &agents, &state, Some(h));
             assert!(!rows[0].incompatible, "harness {h:?}");
         }
+    }
+
+    #[test]
+    fn build_add_rows_marks_incompatible_for_codebuff_when_excluded() {
+        let skills = vec![entry(
+            "claude-only",
+            "0.1.0",
+            "claude only",
+            &["claude-code"],
+            "assets/skills/claude-only",
+        )];
+        let agents: Vec<CatalogEntry> = vec![];
+        let state = ProjectState::default();
+
+        let rows_codebuff = build_add_rows(&skills, &agents, &state, Some(Harness::Codebuff));
+        assert!(rows_codebuff[0].incompatible);
+    }
+
+    #[test]
+    fn build_add_rows_codebuff_compatible_entry_not_dimmed() {
+        let skills = vec![entry(
+            "codebuff-only",
+            "0.1.0",
+            "codebuff only",
+            &["codebuff"],
+            "assets/skills/codebuff-only",
+        )];
+        let agents: Vec<CatalogEntry> = vec![];
+        let state = ProjectState::default();
+
+        let rows_codebuff = build_add_rows(&skills, &agents, &state, Some(Harness::Codebuff));
+        assert!(!rows_codebuff[0].incompatible);
+        let rows_claude = build_add_rows(&skills, &agents, &state, Some(Harness::ClaudeCode));
+        assert!(rows_claude[0].incompatible);
     }
 
     #[test]
@@ -1586,6 +1625,7 @@ mod tests {
         assert_eq!(harness_tag(Harness::ClaudeCode), "claude-code");
         assert_eq!(harness_tag(Harness::Codex), "codex");
         assert_eq!(harness_tag(Harness::OpenCode), "opencode");
+        assert_eq!(harness_tag(Harness::Codebuff), "codebuff");
     }
 
     #[test]
