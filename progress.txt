@@ -9,6 +9,18 @@ Each iteration appends one entry below describing what was implemented, files ch
 - Test fixtures in `src/external/src/tui.rs` use literal install_path strings (e.g. `"assets/skills/foo"`); these are arbitrary test data, not on-disk paths, but should still match the canonical layout to keep the grep-clean property.
 - The PRD intentionally splits the move (US-001) from the build.rs update (US-002); `cargo build` is broken at the US-001 commit and restored at US-002.
 
+## 2026-05-16 - US-002
+- Updated `src/external/build.rs` to scan `assets/skills/` and `assets/agents.md/` instead of the old top-level paths. The `scan_dir` label parameter now carries the full prefix (`assets/skills` / `assets/agents.md`), which flows through to both the cargo rerun-if-changed directive (`dir.display()`) and the panic messages on missing/malformed manifests (`manifest_path.display()`).
+- Mirrored the prefix change in `render_section` so the generated `CatalogEntry::source_path` values now read `assets/skills/<folder>` and `assets/agents.md/<folder>`.
+- Updated the doc-comment in `src/external/src/catalog.rs` to match the new paths.
+- `cargo build` (clean) and `cargo test` both pass: 143 unit tests + 22 integration tests, zero failures.
+- Files changed: `src/external/build.rs`, `src/external/src/catalog.rs`.
+- **Learnings for future iterations:**
+  - `build.rs` uses the `label` argument for two purposes: as the directory path under `repo_root` (`scan_dir`) AND as the prefix for `CatalogEntry::source_path` (`render_section`). Both call sites must be updated together when the layout changes — only updating `scan_dir` would have left stale `skills/foo` source_paths embedded in the binary.
+  - The catalog test (`catalog_sections_are_non_empty`) only asserts non-empty, so it doesn't pin source_path strings — but if future stories add stricter assertions, they should target the `assets/...` prefix.
+  - No test fixtures hard-code `skills/` or `agents.md/` as registry paths; the only literals were already updated in US-001 (`src/external/src/tui.rs` uses `"assets/skills/foo"`).
+---
+
 ## 2026-05-16 - US-001
 - Moved `skills/` -> `assets/skills/` and `agents.md/` -> `assets/agents.md/` via `git mv` so history is preserved for all four entries (grill-me, storytelling-mastery-skill, write-a-skill, karpathy-guidelines).
 - Rewrote every `install_path` in `mapping.yml` to the new `assets/...` prefix.
